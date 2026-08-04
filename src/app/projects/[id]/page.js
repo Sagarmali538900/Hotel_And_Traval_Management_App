@@ -638,9 +638,11 @@ export default function ProjectDetail() {
                                   ({g.daysUsed} nights)
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                Cost: ₹{g.roomCostPerDay.toLocaleString('en-IN')}/night (Total: ₹{g.hotelCost.toLocaleString('en-IN')})
-                              </div>
+                              {g.roomCostPerDay > 0 && (
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  Cost: ₹{g.roomCostPerDay.toLocaleString('en-IN')}/night (Total: ₹{g.hotelCost.toLocaleString('en-IN')})
+                                </div>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleToggleCheckIn(g._id, g.isCheckedIn)}
@@ -805,9 +807,9 @@ export default function ProjectDetail() {
                             )}
                           </td>
                           <td>{g.daysUsed} nights</td>
-                          <td>₹{g.roomCostPerDay.toLocaleString('en-IN')}</td>
+                          <td>{g.roomCostPerDay > 0 ? `₹${g.roomCostPerDay.toLocaleString('en-IN')}` : '-'}</td>
                           <td style={{ textAlign: 'right', paddingRight: 0, fontWeight: '600' }}>
-                            ₹{g.hotelCost.toLocaleString('en-IN')}
+                            {g.hotelCost > 0 ? `₹${g.hotelCost.toLocaleString('en-IN')}` : '-'}
                           </td>
                         </tr>
                       ))}
@@ -1319,7 +1321,6 @@ export default function ProjectDetail() {
                         placeholder="0"
                         value={guestForm.roomCostPerDay || ''}
                         onChange={handleGuestInputChange}
-                        required
                       />
                     </div>
                   </div>
