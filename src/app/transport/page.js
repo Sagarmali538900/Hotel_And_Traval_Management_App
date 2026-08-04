@@ -218,13 +218,20 @@ export default function TransportManagement() {
     return baseCost + fuel + form.otherExpenses;
   };
 
+  const [selectedProjectFilter, setSelectedProjectFilter] = useState('');
+
   // Filter logic
-  const filteredBookings = bookings.filter(b => 
-    b.vehicleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.projectName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBookings = bookings.filter(b => {
+    const matchesSearch = 
+      b.vehicleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.projectName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesProject = !selectedProjectFilter || b.projectId === selectedProjectFilter;
+    
+    return matchesSearch && matchesProject;
+  });
 
   return (
     <div>
@@ -591,18 +598,33 @@ export default function TransportManagement() {
               <Truck size={20} style={{ color: 'var(--accent-emerald)' }} /> Transport Allocations Ledger
             </h2>
 
-            {/* Search Input */}
-            <div style={{ position: 'relative', width: '250px' }}>
-              <input
-                type="text"
-                id="transport-search-input"
-                className="form-input"
-                placeholder="Search vehicle, driver, project..."
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Event Filter */}
+              <select
+                className="form-select"
+                style={{ width: '180px', fontSize: '0.85rem', padding: '0.4rem', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                value={selectedProjectFilter}
+                onChange={(e) => setSelectedProjectFilter(e.target.value)}
+              >
+                <option value="">All Events / Projects</option>
+                {projects.map(p => (
+                  <option key={p._id} value={p._id}>{p.name}</option>
+                ))}
+              </select>
+
+              {/* Search Input */}
+              <div style={{ position: 'relative', width: '220px' }}>
+                <input
+                  type="text"
+                  id="transport-search-input"
+                  className="form-input"
+                  placeholder="Search vehicle, driver..."
+                  style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search size={14} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              </div>
             </div>
           </div>
 
