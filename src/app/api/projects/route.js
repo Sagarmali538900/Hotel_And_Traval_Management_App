@@ -4,30 +4,38 @@ import Project from '@/lib/models/Project';
 import HotelBooking from '@/lib/models/HotelBooking';
 import TransportBooking from '@/lib/models/TransportBooking';
 import TrainBooking from '@/lib/models/TrainBooking';
+import Guest from '@/lib/models/Guest';
 
 export async function GET() {
   try {
     await dbConnect();
     const projects = await Project.find({}).sort({ createdAt: -1 });
 
-    // Aggregate statistics for each project including Trains
+    // Aggregate statistics for each project including Guests
     const projectsWithStats = await Promise.all(
       projects.map(async (project) => {
         const hotelBookings = await HotelBooking.find({ projectId: project._id });
         const transportBookings = await TransportBooking.find({ projectId: project._id });
         const trainBookings = await TrainBooking.find({ projectId: project._id });
+        const guests = await Guest.find({ projectId: project._id });
 
         const totalHotelCost = hotelBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
         const totalTransportCost = transportBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
-        const roomsCount = hotelBookings.length;
+        const totalGuestHotelCost = guests.reduce((sum, g) => sum + (g.hotelCost || 0), 0);
+
+        // Rooms assigned = bulk crew lodging rooms + guests with rooms allocated
+        const roomsCount = hotelBookings.length + guests.filter(g => g.roomNumber && g.roomNumber.trim()).length;
         const vehiclesCount = transportBookings.length;
-        const trainsCount = trainBookings.length;
+        
+        // Trains scheduled = standalone trains list + guest arrivals set as Train
+        const trainsCount = trainBookings.length + guests.filter(g => g.travelMode === 'Train').length;
 
         return {
           ...project.toObject(),
           totalHotelCost,
           totalTransportCost,
-          totalCost: totalHotelCost + totalTransportCost,
+          totalGuestHotelCost,
+          totalCost: totalHotelCost + totalTransportCost + totalGuestHotelCost,
           roomsCount,
           vehiclesCount,
           trainsCount,
