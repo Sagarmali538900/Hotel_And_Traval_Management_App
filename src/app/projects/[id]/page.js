@@ -24,7 +24,8 @@ import {
   Edit3,
   X,
   FileText,
-  Plane
+  Plane,
+  Share2
 } from 'lucide-react';
 
 export default function ProjectDetail() {
@@ -257,6 +258,87 @@ export default function ProjectDetail() {
     window.print();
   };
 
+  // SMART LOGISTICS 1: Get Carpool suggestions (guests arriving within 90 minutes)
+  const getCarpoolSuggestions = () => {
+    if (guestForm.travelMode === 'None' || !guestForm.arrivalDate || !guestForm.arrivalTime) return [];
+    if (!data || !data.guests) return [];
+
+    const myArrivalDateStr = guestForm.arrivalDate;
+    const myTimeStr = guestForm.arrivalTime;
+    
+    const myDateTime = new Date(`${myArrivalDateStr}T${myTimeStr}`);
+    if (isNaN(myDateTime.getTime())) return [];
+
+    return data.guests.filter(g => {
+      // Don't match current guest
+      if (selectedGuest && g._id === selectedGuest._id) return false;
+      // Must match travel mode
+      if (g.travelMode !== guestForm.travelMode) return false;
+      // Must have scheduled arrival
+      if (!g.arrivalDate || !g.arrivalTime) return false;
+      
+      const gDateStr = new Date(g.arrivalDate).toISOString().split('T')[0];
+      if (gDateStr !== myArrivalDateStr) return false;
+
+      const gDateTime = new Date(`${gDateStr}T${g.arrivalTime}`);
+      if (isNaN(gDateTime.getTime())) return false;
+
+      // Difference within 90 minutes
+      const diffMins = Math.abs(gDateTime - myDateTime) / (1000 * 60);
+      return diffMins <= 90;
+    });
+  };
+
+  // SMART LOGISTICS 2: Get drivers active on a specific date (both from transport bookings & guests)
+  const getActiveDriversForDate = (targetDateStr) => {
+    if (!targetDateStr || !data) return [];
+    
+    const driversMap = new Map();
+
+    // 1. Scan general transport fleet bookings
+    if (data.transportBookings) {
+      data.transportBookings.forEach(tb => {
+        const tbDate = new Date(tb.bookingDate).toISOString().split('T')[0];
+        if (tbDate === targetDateStr && tb.driverName && tb.driverName.trim()) {
+          const key = tb.driverName.trim().toLowerCase();
+          driversMap.set(key, {
+            name: tb.driverName.trim(),
+            mobile: tb.driverMobile || '',
+            busySlots: ['Active on general fleet']
+          });
+        }
+      });
+    }
+
+    // 2. Scan other guest shuttle pickups
+    if (data.guests) {
+      data.guests.forEach(g => {
+        if (selectedGuest && g._id === selectedGuest._id) return;
+        
+        if (g.arrivalDate) {
+          const gArrDate = new Date(g.arrivalDate).toISOString().split('T')[0];
+          if (gArrDate === targetDateStr && g.assignedDriverName && g.assignedDriverName.trim()) {
+            const key = g.assignedDriverName.trim().toLowerCase();
+            const slotStr = g.arrivalTime ? `Pickup @ ${g.arrivalTime} (Guest: ${g.guestName})` : `Pickup (Guest: ${g.guestName})`;
+            
+            const existing = driversMap.get(key);
+            if (existing) {
+              existing.busySlots.push(slotStr);
+            } else {
+              driversMap.set(key, {
+                name: g.assignedDriverName.trim(),
+                mobile: g.assignedDriverMobile || '',
+                busySlots: [slotStr]
+              });
+            }
+          }
+        }
+      });
+    }
+
+    return Array.from(driversMap.values());
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
@@ -305,6 +387,9 @@ export default function ProjectDetail() {
     (g.assignedDriverName && g.assignedDriverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (g.travelCode && g.travelCode.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const carpoolMatches = getCarpoolSuggestions();
+  const activeDrivers = getActiveDriversForDate(guestForm.arrivalDate);
 
   return (
     <div>
@@ -415,13 +500,14 @@ export default function ProjectDetail() {
                   {filteredGuests.map((g) => {
                     const needsDriver = g.travelMode !== 'None' && (!g.assignedDriverName || !g.assignedDriverName.trim());
                     const needsRoom = !g.roomNumber || !g.roomNumber.trim();
+                    const isCarpool = g.notes && g.notes.toLowerCase().includes('carpooling');
                     
                     return (
                       <tr 
                         key={g._id}
                         style={{ 
-                          borderLeft: needsDriver ? '4px solid var(--accent-rose)' : needsRoom ? '4px solid var(--accent-amber)' : 'none',
-                          backgroundColor: needsDriver ? 'rgba(244, 63, 94, 0.02)' : needsRoom ? 'rgba(245, 158, 11, 0.02)' : 'transparent'
+                          borderLeft: needsDriver ? '4px solid var(--accent-rose)' : needsRoom ? '4px solid var(--accent-amber)' : isCarpool ? '4px solid var(--accent-violet)' : 'none',
+                          backgroundColor: needsDriver ? 'rgba(244, 63, 94, 0.02)' : needsRoom ? 'rgba(245, 158, 11, 0.02)' : isCarpool ? 'rgba(139, 92, 246, 0.02)' : 'transparent'
                         }}
                       >
                         <td>
@@ -482,6 +568,11 @@ export default function ProjectDetail() {
                             <div>
                               <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
                                 <CheckCircle size={12} style={{ color: 'var(--accent-emerald)' }} /> {g.assignedDriverName}
+                                {isCarpool && (
+                                  <span className="badge" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-violet)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                    <Share2 size={8} /> Pooled
+                                  </span>
+                                )}
                               </div>
                               {g.assignedDriverMobile && (
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
@@ -498,7 +589,7 @@ export default function ProjectDetail() {
                             <button
                               onClick={() => triggerEditGuestModal(g)}
                               className="btn btn-secondary btn-icon"
-                              title="Edit Guestrsvp"
+                              title="Edit Guest RSVP"
                             >
                               <Edit3 size={12} />
                             </button>
@@ -778,7 +869,7 @@ export default function ProjectDetail() {
                           <tr key={b._id}>
                             <td style={{ paddingLeft: 0 }}>
                               <div style={{ fontWeight: '600' }}>{b.guestName}</div>
-                              {b.guestMobile && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 {b.guestMobile}</div>}
+                              {b.guestMobile && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 {g.guestMobile}</div>}
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Persons: {b.numberOfGuests}</div>
                             </td>
                             <td>
@@ -971,6 +1062,49 @@ export default function ProjectDetail() {
                       />
                     </div>
                   </div>
+
+                  {/* SMART CARPOOL RECOMMENDATIONS */}
+                  {carpoolMatches.length > 0 && (
+                    <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: '1rem', borderRadius: '8px', margin: '1rem 0' }}>
+                      <div style={{ color: 'var(--accent-violet)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        <Share2 size={14} /> 💡 SMART CARPOOL RECOMMENDATIONS ({carpoolMatches.length})
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                        The following guests are arriving at the same place within 90 minutes. You can pool them in the same car!
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {carpoolMatches.map(match => (
+                          <div key={match._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '6px', fontSize: '0.8rem' }}>
+                            <div>
+                              <strong>{match.guestName}</strong> ({match.numberOfGuests} guests)
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                Arriving: {match.arrivalTime} (Code: {match.travelCode})
+                                {match.assignedDriverName && ` | Driver: ${match.assignedDriverName}`}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'var(--accent-violet)', color: 'var(--accent-violet)' }}
+                              onClick={() => {
+                                setGuestForm(prev => ({
+                                  ...prev,
+                                  travelCode: match.travelCode,
+                                  arrivalTime: match.arrivalTime,
+                                  arrivalDate: new Date(match.arrivalDate).toISOString().split('T')[0],
+                                  assignedDriverName: match.assignedDriverName || '',
+                                  assignedDriverMobile: match.assignedDriverMobile || '',
+                                  notes: (prev.notes ? prev.notes + '; ' : '') + `Carpooling with ${match.guestName}`
+                                }));
+                              }}
+                            >
+                              Link & Pool Ride
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1001,7 +1135,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
 
-              {/* Show Room Unavailability Reason dropdown/text if hotelName is given but roomNumber is blank */}
+              {/* Show Room Unavailability Reason if hotelName is given but roomNumber is blank */}
               {guestForm.hotelName && !guestForm.roomNumber.trim() && (
                 <div className="form-group" style={{ backgroundColor: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem' }}>
                   <label className="form-label" style={{ color: 'var(--accent-amber)' }}>Reason for Room Pending / Unavailability</label>
@@ -1093,6 +1227,43 @@ export default function ProjectDetail() {
 
               {/* Category 4: Shuttle Driver Details */}
               <h4 style={{ fontSize: '0.85rem', color: 'var(--accent-emerald)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '1.5rem 0 0.75rem 0' }}>Pickup Shuttle driver</h4>
+              
+              {/* ACTIVE DRIVERS LOOKUP BADGES */}
+              {guestForm.arrivalDate && activeDrivers.length > 0 && (
+                <div style={{ marginBottom: '1rem', backgroundColor: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.15)', padding: '0.75rem', borderRadius: '8px' }}>
+                  <label className="form-label" style={{ color: 'var(--accent-emerald)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '0.4rem' }}>
+                    <CheckCircle size={12} /> Active Drivers on {new Date(guestForm.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}:
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {activeDrivers.map((d, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="badge badge-success"
+                        style={{ 
+                          fontSize: '0.65rem', 
+                          padding: '0.25rem 0.5rem', 
+                          cursor: 'pointer',
+                          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                          color: 'var(--accent-emerald)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                        }}
+                        title={d.busySlots.join('\n')}
+                        onClick={() => {
+                          setGuestForm(prev => ({
+                            ...prev,
+                            assignedDriverName: d.name,
+                            assignedDriverMobile: d.mobile
+                          }));
+                        }}
+                      >
+                        {d.name} {d.busySlots.length > 1 ? `(${d.busySlots.length} tasks)` : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Driver Name (Optional)</label>
