@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { 
   Building, 
   Truck, 
+  Train,
   Plus, 
   ArrowRight, 
   Briefcase, 
@@ -22,11 +23,12 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
 
-  // Stats variables
+  // Stats variables including trains
   const [stats, setStats] = useState({
     activeProjects: 0,
     roomsCount: 0,
     vehiclesCount: 0,
+    trainsCount: 0,
     totalSpend: 0
   });
 
@@ -54,12 +56,14 @@ export default function Dashboard() {
     let active = 0;
     let rooms = 0;
     let vehicles = 0;
+    let trains = 0;
     let total = 0;
 
     projList.forEach(p => {
       if (p.status === 'Active') active++;
       rooms += p.roomsCount || 0;
       vehicles += p.vehiclesCount || 0;
+      trains += p.trainsCount || 0;
       total += p.totalCost || 0;
     });
 
@@ -67,6 +71,7 @@ export default function Dashboard() {
       activeProjects: active,
       roomsCount: rooms,
       vehiclesCount: vehicles,
+      trainsCount: trains,
       totalSpend: total
     });
   };
@@ -102,7 +107,7 @@ export default function Dashboard() {
   };
 
   const handleDeleteProject = async (id, name) => {
-    if (!confirm(`Are you sure you want to delete project "${name}"?\nThis will permanently delete all associated hotel and transport bookings.`)) {
+    if (!confirm(`Are you sure you want to delete project "${name}"?\nThis will permanently delete all associated hotel, transport, and train bookings.`)) {
       return;
     }
 
@@ -127,14 +132,14 @@ export default function Dashboard() {
       {/* Hero Header */}
       <div style={{ marginBottom: '2.5rem' }}>
         <h1 className="page-title" id="main-dashboard-title">Unified Project Console</h1>
-        <p className="page-subtitle">Track room allocations, vehicle scheduling, and consolidated billing per project.</p>
+        <p className="page-subtitle">Track room allocations, vehicle scheduling, guest train arrivals, and consolidated billing.</p>
       </div>
 
       {/* KPI Stats Section */}
       <div 
         style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
           gap: '1.5rem',
           marginBottom: '2.5rem'
         }}
@@ -159,14 +164,20 @@ export default function Dashboard() {
         </div>
         <div className="card">
           <div className="stat-item">
+            <span className="stat-val" style={{ color: 'var(--accent-violet)' }}>{stats.trainsCount}</span>
+            <span className="stat-lbl">Trains Tracked</span>
+          </div>
+        </div>
+        <div className="card">
+          <div className="stat-item">
             <span className="stat-val stat-val-cost">₹{stats.totalSpend.toLocaleString('en-IN')}</span>
-            <span className="stat-lbl">Total Management Spend</span>
+            <span className="stat-lbl">Total Consolidated Spend</span>
           </div>
         </div>
       </div>
 
       {/* Main Apps Selection */}
-      <div className="dashboard-grid">
+      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         {/* Hotel Hub Link */}
         <div className="card hero-card hero-card-hotel card-glow">
           <div className="hero-content">
@@ -178,7 +189,7 @@ export default function Dashboard() {
               Assign rooms, track occupancy dates, log nightly prices, and check out room invoices automatically.
             </p>
           </div>
-          <Link href="/hotels" className="btn btn-primary" id="btn-goto-hotels" style={{ width: 'fit-content' }}>
+          <Link href="/hotels" className="btn btn-primary" id="btn-goto-hotels" style={{ width: '100%', marginTop: '1rem' }}>
             Go to Hotels <ArrowRight size={16} />
           </Link>
         </div>
@@ -195,11 +206,33 @@ export default function Dashboard() {
             </p>
           </div>
           <Link href="/transport" className="btn btn-primary" id="btn-goto-transport" style={{ 
-            width: 'fit-content',
+            width: '100%',
+            marginTop: '1rem',
             background: 'linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan))',
             color: '#0b0f19'
           }}>
             Go to Transport <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        {/* Train Hub Link */}
+        <div className="card hero-card card-glow" style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+          <div className="hero-content">
+            <div className="hero-icon-container" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-violet)' }}>
+              <Train size={24} />
+            </div>
+            <h2 className="hero-title">Train Coordination</h2>
+            <p className="hero-desc">
+              Monitor guest train arrival timings, passenger quantities, pickup drivers, and modify schedule histories.
+            </p>
+          </div>
+          <Link href="/trains" className="btn btn-primary" id="btn-goto-trains" style={{ 
+            width: '100%',
+            marginTop: '1rem',
+            background: 'linear-gradient(135deg, var(--accent-violet), var(--accent-blue))',
+            color: '#0b0f19'
+          }}>
+            Go to Trains <ArrowRight size={16} />
           </Link>
         </div>
       </div>
@@ -294,14 +327,18 @@ export default function Dashboard() {
                         </span>
                       </div>
 
-                      <div className="project-stats-grid">
+                      <div className="project-stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                         <div className="stat-item">
                           <span className="stat-val">{project.roomsCount}</span>
-                          <span className="stat-lbl">Rooms Booked</span>
+                          <span className="stat-lbl">Rooms</span>
                         </div>
                         <div className="stat-item">
                           <span className="stat-val">{project.vehiclesCount}</span>
-                          <span className="stat-lbl">Vehicles Rented</span>
+                          <span className="stat-lbl">Vehicles</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-val">{project.trainsCount}</span>
+                          <span className="stat-lbl">Trains</span>
                         </div>
                       </div>
                     </div>

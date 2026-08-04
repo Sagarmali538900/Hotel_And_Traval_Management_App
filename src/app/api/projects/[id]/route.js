@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Project from '@/lib/models/Project';
 import HotelBooking from '@/lib/models/HotelBooking';
 import TransportBooking from '@/lib/models/TransportBooking';
+import TrainBooking from '@/lib/models/TrainBooking';
 
 export async function GET(request, { params }) {
   try {
@@ -16,6 +17,7 @@ export async function GET(request, { params }) {
 
     const hotelBookings = await HotelBooking.find({ projectId: id }).sort({ bookingDate: 1 });
     const transportBookings = await TransportBooking.find({ projectId: id }).sort({ bookingDate: 1 });
+    const trainBookings = await TrainBooking.find({ projectId: id }).sort({ arrivalDate: 1, arrivalTime: 1 });
 
     const totalHotelCost = hotelBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
     const totalTransportCost = transportBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
@@ -26,6 +28,7 @@ export async function GET(request, { params }) {
         project,
         hotelBookings,
         transportBookings,
+        trainBookings,
         totalHotelCost,
         totalTransportCost,
         grandTotal: totalHotelCost + totalTransportCost,
@@ -52,10 +55,11 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
     }
 
-    // If project name was changed, sync cache in bookings
+    // If project name was changed, sync cache in all bookings
     if (body.name) {
       await HotelBooking.updateMany({ projectId: id }, { projectName: body.name });
       await TransportBooking.updateMany({ projectId: id }, { projectName: body.name });
+      await TrainBooking.updateMany({ projectId: id }, { projectName: body.name });
     }
 
     return NextResponse.json({ success: true, data: project });
@@ -78,6 +82,7 @@ export async function DELETE(request, { params }) {
     // Cascade delete all bookings for this project
     await HotelBooking.deleteMany({ projectId: id });
     await TransportBooking.deleteMany({ projectId: id });
+    await TrainBooking.deleteMany({ projectId: id });
 
     return NextResponse.json({ success: true, message: 'Project and all associated bookings deleted successfully' });
   } catch (error) {

@@ -114,7 +114,7 @@ export default function ProjectDetail() {
     );
   }
 
-  const { project, hotelBookings, transportBookings, totalHotelCost, totalTransportCost, grandTotal } = data;
+  const { project, hotelBookings, transportBookings, trainBookings, totalHotelCost, totalTransportCost, grandTotal } = data;
 
   return (
     <div>
@@ -345,7 +345,90 @@ export default function ProjectDetail() {
             )}
           </div>
 
-          {/* Section 3: Financial Summary Card */}
+          {/* Section 3: Train Arrivals */}
+          <div className="invoice-section" style={{ marginTop: '3rem' }}>
+            <h3 className="invoice-section-title">
+              <Train size={18} style={{ color: 'var(--accent-violet)' }} /> 
+              3. Guest Train Arrival Coordination
+            </h3>
+
+            {!trainBookings || trainBookings.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', padding: '1rem 0' }}>
+                No guest train schedules or arrival logistics registered for this project ledger.
+              </p>
+            ) : (
+              <div className="table-container" style={{ border: 'none' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th style={{ paddingLeft: 0 }}>Guest Group & Contact</th>
+                      <th>Train Details</th>
+                      <th>Arrival (Pune-In)</th>
+                      <th>Departure (Pune-Out)</th>
+                      <th style={{ textAlign: 'right', paddingRight: 0 }}>Assigned Driver (Pickup)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trainBookings.map((b) => {
+                      const isUnassigned = !b.assignedDriverName || !b.assignedDriverName.trim();
+                      
+                      return (
+                        <tr 
+                          key={b._id}
+                          style={{
+                            borderLeft: isUnassigned ? '3px solid var(--accent-rose)' : 'none',
+                            backgroundColor: isUnassigned ? 'rgba(244, 63, 94, 0.02)' : 'transparent'
+                          }}
+                        >
+                          <td style={{ paddingLeft: 0 }}>
+                            <div style={{ fontWeight: '600' }}>{b.guestName}</div>
+                            {b.guestMobile && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 {b.guestMobile}</div>}
+                            <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.15rem 0.5rem', fontSize: '0.65rem', marginTop: '0.25rem' }}>
+                              <Users size={10} /> {b.numberOfGuests} {b.numberOfGuests === 1 ? 'person' : 'persons'}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '600' }}>{b.trainName}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Code: {b.trainCode}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '600', color: 'var(--accent-cyan)' }}>{b.arrivalTime}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              {new Date(b.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: '600', color: 'var(--accent-blue)' }}>{b.departureTime}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              {new Date(b.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', paddingRight: 0 }}>
+                            {isUnassigned ? (
+                              <span style={{ color: 'var(--accent-rose)', fontWeight: '600', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <AlertTriangle size={12} /> Pending Pickup Driver
+                              </span>
+                            ) : (
+                              <div>
+                                <div style={{ fontWeight: '600' }}>{b.assignedDriverName}</div>
+                                {b.assignedDriverMobile && (
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    📞 {b.assignedDriverMobile}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Financial Summary Card */}
           <div className="invoice-summary">
             <div className="invoice-summary-grid">
               <div className="summary-row">

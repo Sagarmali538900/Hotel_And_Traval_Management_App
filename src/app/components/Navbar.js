@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Hotel, Truck, LayoutDashboard, Sun, Moon, LogOut } from 'lucide-react';
+import { Hotel, Truck, Train, LayoutDashboard, Sun, Moon, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -94,6 +94,14 @@ export default function Navbar() {
             >
               <Truck size={16} />
               Transport
+            </Link>
+            <Link 
+              href="/trains" 
+              className={`nav-link ${pathname === '/trains' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Train size={16} />
+              Trains
             </Link>
           </>
         )}
