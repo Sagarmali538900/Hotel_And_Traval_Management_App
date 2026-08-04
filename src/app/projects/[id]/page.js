@@ -406,8 +406,11 @@ export default function ProjectDetail() {
   const filteredGuests = guests.filter(g => 
     g.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (g.hotelName && g.hotelName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (g.roomNumber && g.roomNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (g.assignedDriverName && g.assignedDriverName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (g.travelCode && g.travelCode.toLowerCase().includes(searchTerm.toLowerCase()))
+    (g.travelCode && g.travelCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (g.guestMobile && g.guestMobile.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (g.travelMode && g.travelMode.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const carpoolMatches = getCarpoolSuggestions();
