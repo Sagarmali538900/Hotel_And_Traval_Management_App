@@ -343,25 +343,47 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifySelf: 'end', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-                      <div className="stat-item">
-                        <span className="stat-val stat-val-cost">₹{project.totalCost.toLocaleString('en-IN')}</span>
-                        <span className="stat-lbl">Consolidated Cost</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="stat-item">
+                          <span className="stat-val stat-val-cost" style={{ fontSize: '1.15rem' }}>₹{project.totalCost.toLocaleString('en-IN')}</span>
+                          <span className="stat-lbl">Consolidated Cost</span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                         <Link 
                           href={`/projects/${project._id}`} 
-                          className="btn btn-secondary btn-icon"
-                          title="View Consolidated Invoice"
+                          className="btn btn-primary"
+                          id={`btn-open-portal-${project._id}`}
+                          style={{ 
+                            flexGrow: 1, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            gap: '6px', 
+                            fontSize: '0.8rem',
+                            background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))',
+                            color: '#0b0f19',
+                            padding: '0.5rem 1rem'
+                          }}
                         >
-                          <ExternalLink size={16} />
+                          <ExternalLink size={14} /> Open Event Portal
                         </Link>
                         <button 
                           onClick={() => handleDeleteProject(project._id, project.name)} 
                           className="btn btn-danger btn-icon"
                           title="Delete Project Ledger"
+                          style={{ 
+                            width: '38px', 
+                            height: '38px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </div>
