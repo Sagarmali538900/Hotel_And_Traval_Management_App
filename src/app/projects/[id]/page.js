@@ -61,6 +61,7 @@ export default function ProjectDetail() {
     roomCostPerDay: 0,
     assignedDriverName: '',
     assignedDriverMobile: '',
+    isCheckedIn: false,
     notes: ''
   });
   const [guestError, setGuestError] = useState('');
@@ -81,6 +82,25 @@ export default function ProjectDetail() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleCheckIn = async (guestId, currentStatus) => {
+    try {
+      const res = await fetch(`/api/guests/${guestId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isCheckedIn: !currentStatus })
+      });
+      const json = await res.json();
+      if (json.success) {
+        fetchProjectDetails();
+      } else {
+        alert(json.error || 'Failed to toggle check-in status');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating check-in status');
     }
   };
 
@@ -160,6 +180,7 @@ export default function ProjectDetail() {
       roomCostPerDay: 0,
       assignedDriverName: '',
       assignedDriverMobile: '',
+      isCheckedIn: false,
       notes: ''
     });
     setGuestError('');
@@ -187,6 +208,7 @@ export default function ProjectDetail() {
       roomCostPerDay: guest.roomCostPerDay || 0,
       assignedDriverName: guest.assignedDriverName || '',
       assignedDriverMobile: guest.assignedDriverMobile || '',
+      isCheckedIn: guest.isCheckedIn || false,
       notes: guest.notes || ''
     });
     setGuestError('');
@@ -391,6 +413,19 @@ export default function ProjectDetail() {
   const carpoolMatches = getCarpoolSuggestions();
   const activeDrivers = getActiveDriversForDate(guestForm.arrivalDate);
 
+  const localStats = guests.reduce((acc, g) => {
+    acc.totalGuests += g.numberOfGuests || 0;
+    if (g.travelMode === 'Train') {
+      acc.trainGuests += g.numberOfGuests || 0;
+    } else if (g.travelMode === 'Flight') {
+      acc.flightGuests += g.numberOfGuests || 0;
+    }
+    if (g.isCheckedIn) {
+      acc.checkedInGuests += g.numberOfGuests || 0;
+    }
+    return acc;
+  }, { totalGuests: 0, trainGuests: 0, flightGuests: 0, checkedInGuests: 0 });
+
   return (
     <div>
       {/* Top action header bar */}
@@ -458,6 +493,34 @@ export default function ProjectDetail() {
       {/* Active Tab View */}
       {activeTab === 'guests' ? (
         <div className="no-print">
+          {/* Guest Stats Banner */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '1.5rem',
+            marginBottom: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '600' }}>Total Attendees</span>
+              <strong style={{ fontSize: '1.4rem', color: 'var(--text-primary)' }}>{localStats.totalGuests} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>persons</span></strong>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent-violet)', textTransform: 'uppercase', fontWeight: '600' }}>Train Arrivals</span>
+              <strong style={{ fontSize: '1.4rem', color: 'var(--accent-violet)' }}>{localStats.trainGuests} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>persons</span></strong>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textTransform: 'uppercase', fontWeight: '600' }}>Flight Arrivals</span>
+              <strong style={{ fontSize: '1.4rem', color: 'var(--accent-blue)' }}>{localStats.flightGuests} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>persons</span></strong>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', textTransform: 'uppercase', fontWeight: '600' }}>Checked In</span>
+              <strong style={{ fontSize: '1.4rem', color: 'var(--accent-emerald)' }}>{localStats.checkedInGuests} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>persons</span></strong>
+            </div>
+          </div>
           {/* Guest RSVP Directory Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
             <div style={{ position: 'relative', width: '300px' }}>
@@ -541,21 +604,63 @@ export default function ProjectDetail() {
                         </td>
                         <td>
                           {needsRoom ? (
-                            <span className="badge badge-warning" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', color: 'var(--accent-amber)' }}>
-                              <AlertTriangle size={10} /> No Room: {g.roomNotAvailableReason || 'Pending Allocation'}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              <span className="badge badge-warning" style={{ fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: '3px', backgroundColor: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', color: 'var(--accent-amber)', width: 'fit-content' }}>
+                                <AlertTriangle size={10} /> No Room: {g.roomNotAvailableReason || 'Pending Allocation'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCheckIn(g._id, g.isCheckedIn)}
+                                className="btn"
+                                style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.2rem 0.5rem',
+                                  width: 'fit-content',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  border: g.isCheckedIn ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+                                  backgroundColor: g.isCheckedIn ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                                  color: g.isCheckedIn ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {g.isCheckedIn ? '✓ Checked In' : '🏨 Check In'}
+                              </button>
+                            </div>
                           ) : (
-                            <div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                               <div style={{ fontWeight: '600' }}>{g.hotelName}</div>
-                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '0.2rem' }}>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                 <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>Room {g.roomNumber}</span>
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                   ({g.daysUsed} nights)
                                 </span>
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                 Cost: ₹{g.roomCostPerDay.toLocaleString('en-IN')}/night (Total: ₹{g.hotelCost.toLocaleString('en-IN')})
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCheckIn(g._id, g.isCheckedIn)}
+                                className="btn"
+                                style={{
+                                  fontSize: '0.65rem',
+                                  padding: '0.2rem 0.5rem',
+                                  width: 'fit-content',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  border: g.isCheckedIn ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+                                  backgroundColor: g.isCheckedIn ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                                  color: g.isCheckedIn ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {g.isCheckedIn ? '✓ Checked In' : '🏨 Check In'}
+                              </button>
                             </div>
                           )}
                         </td>
@@ -1299,6 +1404,19 @@ export default function ProjectDetail() {
                   value={guestForm.notes}
                   onChange={handleGuestInputChange}
                 />
+              </div>
+
+              <div className="form-group" style={{ marginTop: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: 0 }}>
+                  <input
+                    type="checkbox"
+                    name="isCheckedIn"
+                    checked={guestForm.isCheckedIn}
+                    onChange={(e) => setGuestForm(prev => ({ ...prev, isCheckedIn: e.target.checked }))}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Confirm Attendee Check-In Status (Yes / Checked In)</span>
+                </label>
               </div>
 
               {guestError && <p style={{ color: 'var(--accent-rose)', fontSize: '0.85rem', marginBottom: '1rem' }}>{guestError}</p>}

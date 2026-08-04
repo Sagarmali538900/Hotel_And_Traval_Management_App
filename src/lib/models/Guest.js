@@ -98,6 +98,11 @@ const GuestSchema = new mongoose.Schema(
       trim: true,
     },
     
+    isCheckedIn: {
+      type: Boolean,
+      default: false,
+    },
+    
     notes: {
       type: String,
       trim: true,

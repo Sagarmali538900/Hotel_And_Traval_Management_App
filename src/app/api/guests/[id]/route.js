@@ -55,6 +55,7 @@ export async function PUT(request, { params }) {
     // Shuttle driver details
     if (body.assignedDriverName !== undefined) guest.assignedDriverName = body.assignedDriverName;
     if (body.assignedDriverMobile !== undefined) guest.assignedDriverMobile = body.assignedDriverMobile;
+    if (body.isCheckedIn !== undefined) guest.isCheckedIn = body.isCheckedIn;
     
     if (body.notes !== undefined) guest.notes = body.notes;
 
