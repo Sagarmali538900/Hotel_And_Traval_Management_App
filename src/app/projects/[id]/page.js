@@ -25,7 +25,8 @@ import {
   X,
   FileText,
   Plane,
-  Share2
+  Share2,
+  Grid
 } from 'lucide-react';
 
 export default function ProjectDetail() {
@@ -492,6 +493,14 @@ export default function ProjectDetail() {
           >
             <Printer size={16} /> Print Ledger
           </button>
+          <Link 
+            href={`/projects/${id}/room-map`}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+            id="btn-view-room-map"
+          >
+            <Grid size={16} style={{ color: 'var(--accent-cyan)' }} /> Visual Room Map
+          </Link>
         </div>
       </div>
 
