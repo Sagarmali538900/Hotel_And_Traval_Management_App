@@ -24,9 +24,9 @@ export async function POST(request) {
     await dbConnect();
     const body = await request.json();
 
-    if (!body.projectId || !body.hotelName || !body.bookingDate || !body.roomNumber || !body.daysUsed || !body.roomCostPerDay) {
+    if (!body.projectId || !body.hotelName || !body.bookingDate || !body.roomNumber || !body.daysUsed) {
       return NextResponse.json(
-        { success: false, error: 'All fields are required except notes' },
+        { success: false, error: 'Linked project, hotel name, booking date, room number, and stay duration are required' },
         { status: 400 }
       );
     }

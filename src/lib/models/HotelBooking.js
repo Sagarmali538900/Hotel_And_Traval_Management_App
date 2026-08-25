@@ -32,7 +32,7 @@ const HotelBookingSchema = new mongoose.Schema(
     },
     roomCostPerDay: {
       type: Number,
-      required: [true, 'Please specify the room cost per day'],
+      default: 0,
       min: [0, 'Cost per day cannot be negative'],
     },
     totalCost: {

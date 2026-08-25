@@ -29,6 +29,72 @@ export default function RoomMapPortal() {
   const [assigningGuestId, setAssigningGuestId] = useState('');
   const [submittingAssign, setSubmittingAssign] = useState(false);
 
+  // Add Room Modal States
+  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+  const [newRoomForm, setNewRoomForm] = useState({
+    hotelName: '',
+    roomNumber: '',
+    roomCostPerDay: 0,
+    daysUsed: 1,
+    bookingDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+  const [addingRoom, setAddingRoom] = useState(false);
+  const [addRoomError, setAddRoomError] = useState('');
+
+  const handleRoomFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewRoomForm(prev => ({
+      ...prev,
+      [name]: name === 'daysUsed' ? parseInt(value) || 1 :
+              name === 'roomCostPerDay' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleCreateRoom = async (e) => {
+    e.preventDefault();
+    if (!newRoomForm.hotelName.trim() || !newRoomForm.roomNumber.trim()) {
+      setAddRoomError('Hotel name and Room number are required');
+      return;
+    }
+
+    setAddingRoom(true);
+    setAddRoomError('');
+
+    try {
+      const res = await fetch('/api/hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newRoomForm,
+          projectId: id
+        })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setShowAddRoomModal(false);
+        // Reset form
+        setNewRoomForm({
+          hotelName: '',
+          roomNumber: '',
+          roomCostPerDay: 0,
+          daysUsed: 1,
+          bookingDate: new Date().toISOString().split('T')[0],
+          notes: ''
+        });
+        await fetchProjectDetails();
+      } else {
+        setAddRoomError(json.error || 'Failed to create room allocation');
+      }
+    } catch (err) {
+      console.error(err);
+      setAddRoomError('Error connecting to API server');
+    } finally {
+      setAddingRoom(false);
+    }
+  };
+
   const fetchProjectDetails = async () => {
     try {
       setLoading(true);
@@ -268,9 +334,16 @@ export default function RoomMapPortal() {
           </h1>
           <p className="page-subtitle">Interactive theater-seat selector console for {project.name}.</p>
         </div>
-        <div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button onClick={fetchProjectDetails} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <RefreshCw size={14} /> Refresh Map
+          </button>
+          <button 
+            onClick={() => setShowAddRoomModal(true)} 
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-cyan))' }}
+          >
+            <Plus size={14} /> Add Room
           </button>
         </div>
       </div>
@@ -610,6 +683,130 @@ export default function RoomMapPortal() {
         </div>
 
       </div>
+
+      {/* Add Room Modal Overlay */}
+      {showAddRoomModal && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-card" style={{ maxWidth: '450px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={18} style={{ color: 'var(--accent-cyan)' }} /> Add Room Allocation
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddRoomModal(false);
+                  setAddRoomError('');
+                }} 
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateRoom}>
+              <div className="form-group">
+                <label className="form-label">Hotel Name</label>
+                <input
+                  type="text"
+                  name="hotelName"
+                  className="form-input"
+                  placeholder="e.g. Radisson Blue"
+                  value={newRoomForm.hotelName}
+                  onChange={handleRoomFormChange}
+                  required
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Room Number / Block</label>
+                  <input
+                    type="text"
+                    name="roomNumber"
+                    className="form-input"
+                    placeholder="e.g. 502"
+                    value={newRoomForm.roomNumber}
+                    onChange={handleRoomFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nightly Rate (₹ - Optional)</label>
+                  <input
+                    type="number"
+                    name="roomCostPerDay"
+                    className="form-input"
+                    min="0"
+                    placeholder="0"
+                    value={newRoomForm.roomCostPerDay || ''}
+                    onChange={handleRoomFormChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Stay Duration (Nights)</label>
+                  <input
+                    type="number"
+                    name="daysUsed"
+                    className="form-input"
+                    min="1"
+                    value={newRoomForm.daysUsed}
+                    onChange={handleRoomFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Booking Date</label>
+                  <input
+                    type="date"
+                    name="bookingDate"
+                    className="form-input"
+                    value={newRoomForm.bookingDate}
+                    onChange={handleRoomFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Notes (Optional)</label>
+                <textarea
+                  name="notes"
+                  className="form-input"
+                  placeholder="e.g. Crew lodging block, near elevator..."
+                  rows="2"
+                  value={newRoomForm.notes}
+                  onChange={handleRoomFormChange}
+                />
+              </div>
+
+              {addRoomError && (
+                <p style={{ color: 'var(--accent-rose)', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertTriangle size={14} /> {addRoomError}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowAddRoomModal(false);
+                    setAddRoomError('');
+                  }} 
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={addingRoom}>
+                  {addingRoom ? <Loader2 size={16} className="spinner" /> : 'Create Room'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
