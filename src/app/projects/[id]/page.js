@@ -393,17 +393,51 @@ export default function ProjectDetail() {
 
   const { 
     project, 
+    guests, 
     hotelBookings, 
     transportBookings, 
-    trainBookings, 
-    guests, 
+    trainBookings,
     totalHotelCost, 
     totalTransportCost, 
     totalGuestHotelCost, 
     grandTotal 
   } = data;
 
-  const filteredGuests = guests.filter(g => 
+  const sortedGuests = [...guests].sort((a, b) => {
+    const roomA = a.roomNumber ? a.roomNumber.trim().toLowerCase() : '';
+    const roomB = b.roomNumber ? b.roomNumber.trim().toLowerCase() : '';
+    
+    // Sort empty room numbers to the bottom
+    if (!roomA && roomB) return 1;
+    if (roomA && !roomB) return -1;
+    if (!roomA && !roomB) {
+      return a.guestName.localeCompare(b.guestName);
+    }
+    
+    // Sort by hotel name first
+    const hotelA = a.hotelName ? a.hotelName.trim().toLowerCase() : '';
+    const hotelB = b.hotelName ? b.hotelName.trim().toLowerCase() : '';
+    if (hotelA !== hotelB) {
+      return hotelA.localeCompare(hotelB);
+    }
+    
+    // Sort by room number (numeric if possible, otherwise string sort)
+    const numA = parseInt(roomA, 10);
+    const numB = parseInt(roomB, 10);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      if (numA !== numB) {
+        return numA - numB;
+      }
+    } else {
+      const roomComp = roomA.localeCompare(roomB);
+      if (roomComp !== 0) return roomComp;
+    }
+    
+    // Group multiple people in the same room by name
+    return a.guestName.localeCompare(b.guestName);
+  });
+
+  const filteredGuests = sortedGuests.filter(g => 
     g.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (g.hotelName && g.hotelName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (g.roomNumber && g.roomNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -788,7 +822,7 @@ export default function ProjectDetail() {
                       </tr>
                     </thead>
                     <tbody>
-                      {guests.map((g) => (
+                      {sortedGuests.map((g) => (
                         <tr key={g._id}>
                           <td style={{ paddingLeft: 0, fontWeight: '600' }}>{g.guestName}</td>
                           <td>{g.hotelName || <span style={{ color: 'var(--text-muted)' }}>N/A</span>}</td>
