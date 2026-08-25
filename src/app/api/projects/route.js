@@ -23,8 +23,23 @@ export async function GET() {
         const totalTransportCost = transportBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
         const totalGuestHotelCost = guests.reduce((sum, g) => sum + (g.hotelCost || 0), 0);
 
-        // Rooms assigned = bulk crew lodging rooms + guests with rooms allocated
-        const roomsCount = hotelBookings.length + guests.filter(g => g.roomNumber && g.roomNumber.trim()).length;
+        // Count unique hotel + room combinations (same room number = double occupancy / 1 room total)
+        const uniqueRooms = new Set();
+        hotelBookings.forEach(hb => {
+          const hotel = (hb.hotelName || 'default').trim().toLowerCase();
+          const room = (hb.roomNumber || '').trim().toLowerCase();
+          if (room) {
+            uniqueRooms.add(`${hotel}-${room}`);
+          }
+        });
+        guests.forEach(g => {
+          const hotel = (g.hotelName || 'default').trim().toLowerCase();
+          const room = (g.roomNumber || '').trim().toLowerCase();
+          if (room) {
+            uniqueRooms.add(`${hotel}-${room}`);
+          }
+        });
+        const roomsCount = uniqueRooms.size;
         const vehiclesCount = transportBookings.length;
         
         // Trains scheduled = standalone trains list + guest arrivals set as Train
