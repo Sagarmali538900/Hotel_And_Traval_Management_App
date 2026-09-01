@@ -470,7 +470,7 @@ export default function ProjectDetail() {
   // Compile Room-by-Room data structure for the printable ledger
   const roomGroupsMap = {};
 
-  // 1. Process general hotel bulk blocks
+  // 1. First pass: group all bulk blocks and guest stays by room key
   hotelBookings.forEach(hb => {
     const hotel = (hb.hotelName || 'Unspecified Hotel').trim();
     const room = (hb.roomNumber || 'Unassigned').trim();
@@ -481,11 +481,11 @@ export default function ProjectDetail() {
         hotelName: hotel,
         roomNumber: room,
         occupants: [],
+        bulkBlock: hb,
         inDate: hb.bookingDate ? new Date(hb.bookingDate).toISOString() : null,
         outDate: null,
         daysUsed: hb.daysUsed || 1,
-        roomCostPerDay: hb.roomCostPerDay || 0,
-        totalCost: hb.totalCost || (hb.daysUsed * (hb.roomCostPerDay || 0))
+        roomCostPerDay: hb.roomCostPerDay || 0
       };
       if (hb.bookingDate && hb.daysUsed) {
         const d = new Date(hb.bookingDate);
@@ -495,7 +495,6 @@ export default function ProjectDetail() {
     }
   });
 
-  // 2. Process guest stays (grouping by Hotel + Room Number)
   guests.forEach(g => {
     const hotel = (g.hotelName || '').trim();
     const room = (g.roomNumber || '').trim();
@@ -510,11 +509,11 @@ export default function ProjectDetail() {
           hotelName: hotel || 'Assigned Hotel',
           roomNumber: room,
           occupants: [g],
+          bulkBlock: null,
           inDate: checkIn ? new Date(checkIn).toISOString() : null,
           outDate: checkOut ? new Date(checkOut).toISOString() : null,
           daysUsed: g.daysUsed || 1,
-          roomCostPerDay: g.roomCostPerDay || 0,
-          totalCost: g.hotelCost || (g.daysUsed * (g.roomCostPerDay || 0))
+          roomCostPerDay: g.roomCostPerDay || 0
         };
       } else {
         roomGroupsMap[key].occupants.push(g);
@@ -523,10 +522,6 @@ export default function ProjectDetail() {
         }
         if (checkOut && (!roomGroupsMap[key].outDate || new Date(checkOut) > new Date(roomGroupsMap[key].outDate))) {
           roomGroupsMap[key].outDate = new Date(checkOut).toISOString();
-        }
-        if (g.hotelCost > roomGroupsMap[key].totalCost) {
-          roomGroupsMap[key].totalCost = g.hotelCost;
-          roomGroupsMap[key].roomCostPerDay = g.roomCostPerDay;
         }
       }
     } else {
@@ -537,6 +532,7 @@ export default function ProjectDetail() {
         hotelName: 'Unallocated Stay',
         roomNumber: 'Pending',
         occupants: [g],
+        bulkBlock: null,
         inDate: checkIn ? new Date(checkIn).toISOString() : null,
         outDate: checkOut ? new Date(checkOut).toISOString() : null,
         daysUsed: g.daysUsed || 0,
@@ -545,6 +541,35 @@ export default function ProjectDetail() {
         isUnallocated: true
       };
     }
+  });
+
+  // Second pass: Calculate accurate duration, full room nightly rate, and total room cost
+  Object.values(roomGroupsMap).forEach(rg => {
+    if (rg.isUnallocated) return;
+
+    // 1. Calculate duration (daysUsed) from stay dates
+    if (rg.inDate && rg.outDate) {
+      const dIn = new Date(rg.inDate);
+      const dOut = new Date(rg.outDate);
+      const diffMs = dOut.getTime() - dIn.getTime();
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays > 0) {
+        rg.daysUsed = Math.max(rg.daysUsed || 1, diffDays);
+      }
+    }
+
+    // 2. Calculate full room nightly rate (roomCostPerDay)
+    if (rg.bulkBlock && rg.bulkBlock.roomCostPerDay > 0) {
+      rg.roomCostPerDay = rg.bulkBlock.roomCostPerDay;
+    } else if (rg.occupants.length > 0) {
+      const maxRate = Math.max(...rg.occupants.map(o => o.roomCostPerDay || 0));
+      const sumRates = rg.occupants.reduce((sum, o) => sum + (o.roomCostPerDay || 0), 0);
+      // If any occupant has full room rate (>= 3000), use maxRate. Otherwise if split across occupants, sum rates.
+      rg.roomCostPerDay = maxRate >= 3000 ? maxRate : sumRates;
+    }
+
+    // 3. Total Room Cost = duration * full room nightly rate
+    rg.totalCost = (rg.daysUsed || 1) * (rg.roomCostPerDay || 0);
   });
 
   const roomGroups = Object.values(roomGroupsMap).sort((a, b) => {
