@@ -521,9 +521,7 @@ export default function RoomMapPortal() {
                     const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
 
                     return (
-                      <div
-                        role="button"
-                        tabIndex={0}
+                      <button
                         key={room.roomNumber}
                         onClick={() => setSelectedRoom({
                           hotelName: hotel.hotelName,
@@ -534,19 +532,6 @@ export default function RoomMapPortal() {
                           inDate: inDate,
                           notes: room.notes || ''
                         })}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            setSelectedRoom({
-                              hotelName: hotel.hotelName,
-                              roomNumber: room.roomNumber,
-                              occupants: room.occupants,
-                              roomCostPerDay: room.roomCostPerDay || 0,
-                              daysUsed: room.daysUsed || 1,
-                              inDate: inDate,
-                              notes: room.notes || ''
-                            });
-                          }
-                        }}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -566,44 +551,6 @@ export default function RoomMapPortal() {
                         }}
                         title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
-                        {/* Quick Edit Button in Top-Right Corner of Seat Tile */}
-                        <button 
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditRoomModal({
-                              hotelName: hotel.hotelName,
-                              roomNumber: room.roomNumber,
-                              occupants: room.occupants,
-                              roomCostPerDay: room.roomCostPerDay || 0,
-                              daysUsed: room.daysUsed || 1,
-                              inDate: inDate,
-                              notes: room.notes || ''
-                            });
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '2px 5px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            fontSize: '0.65rem',
-                            fontWeight: '600',
-                            zIndex: 10,
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)'
-                          }}
-                          title={`Edit Room ${room.roomNumber}`}
-                        >
-                          <Pencil size={11} style={{ strokeWidth: 2.5 }} /> Edit
-                        </button>
-
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <Bed size={14} style={{ opacity: 0.8 }} />
                           <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>{room.roomNumber}</span>
@@ -642,7 +589,7 @@ export default function RoomMapPortal() {
                             ))}
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
