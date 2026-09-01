@@ -685,6 +685,21 @@ export default function ProjectDetail() {
           >
             <Printer size={16} /> Print Ledger
           </button>
+          <button
+            onClick={() => {
+              const activeGroup = roomGroups.find(rg => !rg.isUnallocated);
+              if (activeGroup) {
+                handleOpenEditRoomModal(activeGroup);
+              } else {
+                handleOpenEditRoomModal({ hotelName: '', roomNumber: '', roomCostPerDay: 0, daysUsed: 1 });
+              }
+            }}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            id="btn-edit-room"
+          >
+            <Edit3 size={16} style={{ color: 'var(--accent-blue)' }} /> Edit Room Details
+          </button>
           <Link 
             href={`/projects/${id}/room-map`}
             className="btn btn-secondary"
@@ -1699,6 +1714,30 @@ export default function ProjectDetail() {
             </div>
 
             <form onSubmit={handleUpdateRoom}>
+              {roomGroups.filter(rg => !rg.isUnallocated).length > 0 && (
+                <div className="form-group" style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '1.25rem' }}>
+                  <label className="form-label" style={{ color: 'var(--accent-blue)', fontWeight: '700', fontSize: '0.8rem' }}>SELECT ROOM TO EDIT</label>
+                  <select
+                    className="form-input"
+                    style={{ fontWeight: '600', backgroundColor: 'var(--card-bg, #1e293b)', color: 'var(--text-primary)' }}
+                    value={`${editRoomForm.oldHotelName}___${editRoomForm.oldRoomNumber}`}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const selectedGroup = roomGroups.find(rg => `${rg.hotelName}___${rg.roomNumber}` === val);
+                      if (selectedGroup) {
+                        handleOpenEditRoomModal(selectedGroup);
+                      }
+                    }}
+                  >
+                    {roomGroups.filter(rg => !rg.isUnallocated).map((rg, idx) => (
+                      <option key={idx} value={`${rg.hotelName}___${rg.roomNumber}`}>
+                        Room {rg.roomNumber} - {rg.hotelName} ({rg.occupants.map(o => o.guestName).join(', ') || 'Unassigned Block'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Hotel Name</label>
                 <input
