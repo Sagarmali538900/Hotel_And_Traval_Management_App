@@ -44,13 +44,16 @@ export default function ProjectDetail() {
 
   const handleDownloadPDF = async () => {
     setDownloadingPDF(true);
+    const element = document.querySelector('.invoice-container');
+    if (!element) {
+      window.print();
+      setDownloadingPDF(false);
+      return;
+    }
+
     try {
-      const element = document.querySelector('.invoice-container');
-      if (!element) {
-        window.print();
-        setDownloadingPDF(false);
-        return;
-      }
+      // Temporarily toggle clean white commercial invoice theme for PDF export
+      element.classList.add('pdf-export-mode');
 
       if (!window.html2pdf) {
         const script = document.createElement('script');
@@ -64,11 +67,12 @@ export default function ProjectDetail() {
 
       const cleanProjectName = (data?.project?.name || 'Ledger').replace(/[^a-zA-Z0-9_-]/g, '_');
       const opt = {
-        margin:       [0.3, 0.3, 0.3, 0.3],
+        margin:       [0.4, 0.4, 0.4, 0.4],
         filename:     `Consolidated_Invoice_${cleanProjectName}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
       await window.html2pdf().set(opt).from(element).save();
@@ -82,6 +86,7 @@ export default function ProjectDetail() {
         document.title = originalTitle;
       }, 1000);
     } finally {
+      element.classList.remove('pdf-export-mode');
       setDownloadingPDF(false);
     }
   };

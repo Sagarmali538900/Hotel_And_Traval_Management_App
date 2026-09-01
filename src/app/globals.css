@@ -778,3 +778,126 @@ html, body {
     border-top: 2px solid #000 !important;
   }
 }
+
+/* Clean White Commercial PDF Export Mode */
+.pdf-export-mode, 
+.pdf-export-mode * {
+  box-sizing: border-box !important;
+}
+
+.pdf-export-mode {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  padding: 1.5rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.pdf-export-mode h1,
+.pdf-export-mode h2,
+.pdf-export-mode h3,
+.pdf-export-mode h4,
+.pdf-export-mode span,
+.pdf-export-mode p,
+.pdf-export-mode td,
+.pdf-export-mode th,
+.pdf-export-mode div {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+.pdf-export-mode .invoice-header {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 1.25rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+.pdf-export-mode .invoice-title {
+  color: #1e3a8a !important;
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.pdf-export-mode .invoice-section-title {
+  color: #1e3a8a !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  padding-bottom: 0.5rem !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.pdf-export-mode table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background-color: #ffffff !important;
+}
+
+.pdf-export-mode th {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase !important;
+  padding: 0.6rem 0.75rem !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+.pdf-export-mode td {
+  padding: 0.65rem 0.75rem !important;
+  font-size: 0.85rem !important;
+  color: #334155 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.pdf-export-mode tr {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+.pdf-export-mode tr:nth-child(even) td {
+  background-color: #f8fafc !important;
+}
+
+.pdf-export-mode [style*="border-radius: 9999px"],
+.pdf-export-mode [style*="borderRadius: '9999px'"],
+.pdf-export-mode [style*="border-radius: 12px"],
+.pdf-export-mode [style*="borderRadius: '12px'"] {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+  font-weight: 700 !important;
+}
+
+.pdf-export-mode .invoice-summary {
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 1rem 1.25rem !important;
+  margin-top: 1.5rem !important;
+  page-break-inside: avoid !important;
+}
+
+.pdf-export-mode .summary-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  padding: 0.4rem 0 !important;
+  color: #334155 !important;
+  font-size: 0.9rem !important;
+}
+
+.pdf-export-mode .summary-row-total {
+  border-top: 2px solid #0f172a !important;
+  padding-top: 0.6rem !important;
+  margin-top: 0.4rem !important;
+  font-weight: 800 !important;
+  font-size: 1.1rem !important;
+  color: #0f172a !important;
+}
