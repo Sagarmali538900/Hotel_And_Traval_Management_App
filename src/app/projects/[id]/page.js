@@ -1677,6 +1677,8 @@ export default function ProjectDetail() {
             </form>
           </div>
         </div>
+      )}
+
       {/* Edit Room Modal Overlay */}
       {showEditRoomModal && (
         <div className="modal-overlay no-print" style={{ zIndex: 1000 }}>
