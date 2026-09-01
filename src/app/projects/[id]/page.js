@@ -146,6 +146,11 @@ export default function ProjectDetail() {
     } catch (err) {
       console.error(err);
       alert('Error updating status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   // Edit Room Modal States
   const [showEditRoomModal, setShowEditRoomModal] = useState(false);
   const [editRoomForm, setEditRoomForm] = useState({
@@ -1848,16 +1853,6 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .spinner {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }
