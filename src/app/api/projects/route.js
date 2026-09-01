@@ -19,27 +19,40 @@ export async function GET() {
         const trainBookings = await TrainBooking.find({ projectId: project._id });
         const guests = await Guest.find({ projectId: project._id });
 
-        const totalHotelCost = hotelBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
-        const totalTransportCost = transportBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
-        const totalGuestHotelCost = guests.reduce((sum, g) => sum + (g.hotelCost || 0), 0);
-
-        // Count unique hotel + room combinations (same room number = double occupancy / 1 room total)
-        const uniqueRooms = new Set();
+        // Deduplicate hotel lodging costs room-by-room (charging each physical room ONCE, accounting for double occupancy)
+        const roomMap = {};
         hotelBookings.forEach(hb => {
-          const hotel = (hb.hotelName || 'default').trim().toLowerCase();
-          const room = (hb.roomNumber || '').trim().toLowerCase();
-          if (room) {
-            uniqueRooms.add(`${hotel}-${room}`);
-          }
+          const hotel = (hb.hotelName || 'Unspecified Hotel').trim().toLowerCase();
+          const room = (hb.roomNumber || 'Unassigned').trim().toLowerCase();
+          const key = `${hotel}-${room}`;
+          const days = hb.daysUsed || 1;
+          const rate = hb.roomCostPerDay || 0;
+          const cost = hb.totalCost > 0 ? hb.totalCost : (days * rate);
+          roomMap[key] = { days, rate, cost };
         });
+
         guests.forEach(g => {
-          const hotel = (g.hotelName || 'default').trim().toLowerCase();
+          const hotel = (g.hotelName || '').trim().toLowerCase();
           const room = (g.roomNumber || '').trim().toLowerCase();
           if (room) {
-            uniqueRooms.add(`${hotel}-${room}`);
+            const key = `${hotel || 'default'}-${room}`;
+            const days = g.daysUsed || 1;
+            const rate = g.roomCostPerDay || 0;
+            const cost = g.hotelCost > 0 ? g.hotelCost : (days * rate);
+            if (!roomMap[key] || cost > roomMap[key].cost) {
+              roomMap[key] = { days, rate, cost };
+            }
+          } else if (g.hotelCost > 0) {
+            const key = `unallocated-${g._id}`;
+            roomMap[key] = { days: g.daysUsed || 1, rate: g.roomCostPerDay || 0, cost: g.hotelCost };
           }
         });
-        const roomsCount = uniqueRooms.size;
+
+        const totalLodgingCost = Object.values(roomMap).reduce((sum, r) => sum + (r.cost || 0), 0);
+        const totalTransportCost = transportBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+
+        // Count unique hotel + room combinations (same room number = double occupancy / 1 room total)
+        const roomsCount = Object.keys(roomMap).filter(k => !k.startsWith('unallocated-')).length;
         const vehiclesCount = transportBookings.length;
         
         // Trains scheduled = standalone trains list + guest arrivals set as Train
@@ -47,10 +60,10 @@ export async function GET() {
 
         return {
           ...project.toObject(),
-          totalHotelCost,
+          totalHotelCost: totalLodgingCost,
           totalTransportCost,
-          totalGuestHotelCost,
-          totalCost: totalHotelCost + totalTransportCost + totalGuestHotelCost,
+          totalGuestHotelCost: totalLodgingCost,
+          totalCost: totalLodgingCost + totalTransportCost,
           roomsCount,
           vehiclesCount,
           trainsCount,
