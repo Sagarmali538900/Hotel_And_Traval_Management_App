@@ -15,7 +15,9 @@ import {
   Bed, 
   UserPlus, 
   UserMinus,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  Clock
 } from 'lucide-react';
 
 export default function RoomMapPortal() {
@@ -394,7 +396,7 @@ export default function RoomMapPortal() {
                 {/* Visual Seat Grid */}
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(75px, 1fr))', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', 
                   gap: '0.75rem' 
                 }}>
                   {hotel.rooms.map((room) => {
@@ -420,6 +422,28 @@ export default function RoomMapPortal() {
                       selectedRoom.hotelName === hotel.hotelName && 
                       selectedRoom.roomNumber === room.roomNumber;
 
+                    // Calculate Room IN and OUT stay dates
+                    let inDate = null;
+                    let outDate = null;
+                    if (room.occupants && room.occupants.length > 0) {
+                      room.occupants.forEach(o => {
+                        const checkIn = o.checkInDate || o.arrivalDate;
+                        const checkOut = o.checkOutDate || o.departureDate;
+                        if (checkIn && (!inDate || new Date(checkIn) < new Date(inDate))) inDate = checkIn;
+                        if (checkOut && (!outDate || new Date(checkOut) > new Date(outDate))) outDate = checkOut;
+                      });
+                    } else if (room.bookingDate) {
+                      inDate = room.bookingDate;
+                      if (room.daysUsed) {
+                        const d = new Date(room.bookingDate);
+                        d.setDate(d.getDate() + room.daysUsed);
+                        outDate = d.toISOString();
+                      }
+                    }
+
+                    const formattedIn = inDate ? new Date(inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+                    const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+
                     return (
                       <button
                         key={room.roomNumber}
@@ -433,7 +457,8 @@ export default function RoomMapPortal() {
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          aspectRatio: '1',
+                          padding: '0.65rem 0.35rem',
+                          minHeight: '85px',
                           borderRadius: '8px',
                           backgroundColor: bg,
                           border: isSelected ? '2px solid var(--accent-cyan)' : border,
@@ -442,16 +467,35 @@ export default function RoomMapPortal() {
                           cursor: 'pointer',
                           position: 'relative',
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          transform: isSelected ? 'scale(1.05)' : 'none',
+                          transform: isSelected ? 'scale(1.03)' : 'none',
                         }}
-                        title={`${room.roomNumber} - ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
+                        title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
-                        <Bed size={16} style={{ marginBottom: '4px', opacity: 0.8 }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>{room.roomNumber}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                          <Bed size={14} style={{ opacity: 0.8 }} />
+                          <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>{room.roomNumber}</span>
+                        </div>
+
+                        {/* Room IN & OUT Stay Dates */}
+                        <div style={{ fontSize: '0.62rem', opacity: 0.9, marginTop: '2px', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.25' }}>
+                          {formattedIn && (
+                            <span style={{ color: 'var(--accent-cyan)', fontWeight: '600' }}>
+                              IN: {formattedIn}
+                            </span>
+                          )}
+                          {formattedOut && (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem' }}>
+                              OUT: {formattedOut}
+                            </span>
+                          )}
+                          {!formattedIn && !formattedOut && (
+                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.58rem' }}>No dates</span>
+                          )}
+                        </div>
                         
                         {/* Occupancy dots indicator */}
                         {room.occupants.length > 0 && (
-                          <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '6px' }}>
+                          <div style={{ display: 'flex', gap: '3px', position: 'absolute', bottom: '4px' }}>
                             {room.occupants.map(o => (
                               <span 
                                 key={o._id} 
@@ -523,6 +567,14 @@ export default function RoomMapPortal() {
                         <div>
                           <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{occ.guestName}</div>
                           {occ.guestMobile && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>📞 {occ.guestMobile}</div>}
+                          
+                          {/* Stay IN and OUT dates */}
+                          <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={11} /> 
+                            <span>IN: {occ.checkInDate ? new Date(occ.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.arrivalDate ? new Date(occ.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                            <span>•</span>
+                            <span>OUT: {occ.checkOutDate ? new Date(occ.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.departureDate ? new Date(occ.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                          </div>
                           
                           {/* Live check-in badge switch */}
                           <button
@@ -635,9 +687,15 @@ export default function RoomMapPortal() {
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: '600' }}>{ug.guestName}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                        {ug.numberOfGuests} pax | In: {ug.arrivalDate ? new Date(ug.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD'}
+                      <div style={{ fontWeight: '600' }}>{ug.guestName} ({ug.numberOfGuests} pax)</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <span style={{ color: 'var(--accent-cyan)' }}>
+                          IN: {ug.checkInDate ? new Date(ug.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (ug.arrivalDate ? new Date(ug.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          OUT: {ug.checkOutDate ? new Date(ug.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (ug.departureDate ? new Date(ug.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}
+                        </span>
                       </div>
                     </div>
 
