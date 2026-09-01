@@ -51,10 +51,27 @@ export default function ProjectDetail() {
       return;
     }
 
+    const savedStyles = new Map();
+    const allElements = [element, ...Array.from(element.querySelectorAll('*'))];
+
     try {
-      // Temporarily toggle clean white commercial invoice theme for PDF export
+      // 1. Convert all DOM elements to inline white paper commercial theme
+      allElements.forEach(el => {
+        savedStyles.set(el, el.getAttribute('style') || '');
+        el.style.backgroundColor = '#ffffff';
+        el.style.color = '#0f172a';
+        if (el.tagName === 'TH') {
+          el.style.backgroundColor = '#f1f5f9';
+          el.style.color = '#1e293b';
+        }
+        if (el.tagName === 'TD' || el.tagName === 'TH' || el.tagName === 'TABLE') {
+          el.style.borderColor = '#e2e8f0';
+        }
+      });
+
       element.classList.add('pdf-export-mode');
 
+      // 2. Load html2pdf dynamically if not present
       if (!window.html2pdf) {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -86,6 +103,15 @@ export default function ProjectDetail() {
         document.title = originalTitle;
       }, 1000);
     } finally {
+      // 3. Restore original screen styles
+      allElements.forEach(el => {
+        const orig = savedStyles.get(el);
+        if (orig) {
+          el.setAttribute('style', orig);
+        } else {
+          el.removeAttribute('style');
+        }
+      });
       element.classList.remove('pdf-export-mode');
       setDownloadingPDF(false);
     }
@@ -1949,3 +1975,5 @@ export default function ProjectDetail() {
     </div>
   );
 }
+
+// pdf-export-v2
