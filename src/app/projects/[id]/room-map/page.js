@@ -521,7 +521,9 @@ export default function RoomMapPortal() {
                     const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
 
                     return (
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={0}
                         key={room.roomNumber}
                         onClick={() => setSelectedRoom({
                           hotelName: hotel.hotelName,
@@ -532,6 +534,19 @@ export default function RoomMapPortal() {
                           inDate: inDate,
                           notes: room.notes || ''
                         })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setSelectedRoom({
+                              hotelName: hotel.hotelName,
+                              roomNumber: room.roomNumber,
+                              occupants: room.occupants,
+                              roomCostPerDay: room.roomCostPerDay || 0,
+                              daysUsed: room.daysUsed || 1,
+                              inDate: inDate,
+                              notes: room.notes || ''
+                            });
+                          }
+                        }}
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -627,7 +642,7 @@ export default function RoomMapPortal() {
                             ))}
                           </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
