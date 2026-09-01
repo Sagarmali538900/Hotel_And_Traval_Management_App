@@ -26,7 +26,8 @@ import {
   FileText,
   Plane,
   Share2,
-  Grid
+  Grid,
+  Download
 } from 'lucide-react';
 
 export default function ProjectDetail() {
@@ -38,7 +39,52 @@ export default function ProjectDetail() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('guests'); // 'guests' or 'billing'
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleDownloadPDF = async () => {
+    setDownloadingPDF(true);
+    try {
+      const element = document.querySelector('.invoice-container');
+      if (!element) {
+        window.print();
+        setDownloadingPDF(false);
+        return;
+      }
+
+      if (!window.html2pdf) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        document.head.appendChild(script);
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+        });
+      }
+
+      const cleanProjectName = (data?.project?.name || 'Ledger').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const opt = {
+        margin:       [0.3, 0.3, 0.3, 0.3],
+        filename:     `Consolidated_Invoice_${cleanProjectName}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      await window.html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error('PDF download error:', err);
+      const originalTitle = document.title;
+      const cleanProjectName = (data?.project?.name || 'Ledger').replace(/[^a-zA-Z0-9_-]/g, '_');
+      document.title = `Consolidated_Invoice_${cleanProjectName}`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   // Add/Edit Guest Modal state
   const [activeGuestModal, setActiveGuestModal] = useState(null); // 'add' or 'edit'
@@ -683,12 +729,30 @@ export default function ProjectDetail() {
             {project.status === 'Active' ? 'Mark Completed' : 'Reopen Event'}
           </button>
           <button 
-            onClick={handlePrint} 
+            onClick={handleDownloadPDF} 
             className="btn btn-primary"
+            disabled={downloadingPDF}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              backgroundColor: '#059669',
+              borderColor: '#059669',
+              color: '#ffffff',
+              fontWeight: '700'
+            }}
+            id="btn-download-pdf"
+          >
+            {downloadingPDF ? <Loader2 size={16} className="spinner" /> : <Download size={16} />} 
+            Download PDF
+          </button>
+          <button 
+            onClick={handlePrint} 
+            className="btn btn-secondary"
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             id="btn-print-invoice"
           >
-            <Printer size={16} /> Print Ledger
+            <Printer size={16} /> Print
           </button>
           <button
             onClick={() => {
