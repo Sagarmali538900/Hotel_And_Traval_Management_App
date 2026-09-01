@@ -706,6 +706,12 @@ html, body {
   max-width: 500px;
 }
 
+@media screen {
+  .hide-on-screen-only {
+    display: none !important;
+  }
+}
+
 /* Print Styles */
 @media print {
   body {
@@ -722,9 +728,14 @@ html, body {
   }
   
   .invoice-container {
+    display: block !important;
     border: none !important;
     box-shadow: none !important;
     background-color: white !important;
+  }
+  
+  .hide-on-screen-only {
+    display: block !important;
   }
   
   .invoice-header {

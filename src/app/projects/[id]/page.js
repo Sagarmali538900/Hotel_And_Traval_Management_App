@@ -278,7 +278,10 @@ export default function ProjectDetail() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setActiveTab('billing');
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   // SMART LOGISTICS 1: Get Carpool suggestions (guests arriving within 90 minutes)
@@ -632,8 +635,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* Active Tab View */}
-      {activeTab === 'guests' ? (
-        <div className="no-print">
+      <div className={`no-print ${activeTab !== 'guests' ? 'hide-on-screen-only' : ''}`}>
           {/* Guest Stats Banner */}
           <div style={{ 
             display: 'grid', 
@@ -858,9 +860,9 @@ export default function ProjectDetail() {
             </div>
           )}
         </div>
-      ) : (
-        /* Invoice Details View (Printable version) */
-        <div className="invoice-container">
+
+        {/* Invoice Details View (Always rendered in DOM for window.print) */}
+        <div className={`invoice-container ${activeTab !== 'billing' ? 'hide-on-screen-only' : ''}`}>
           <div className="invoice-header">
             <div className="invoice-header-left">
               <div className="nav-brand" style={{ fontSize: '1.75rem', marginBottom: '1.5rem', pointerEvents: 'none' }}>
