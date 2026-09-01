@@ -552,7 +552,8 @@ export default function RoomMapPortal() {
                         title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
                         {/* Quick Edit Button in Top-Right Corner of Seat Tile */}
-                        <div 
+                        <button 
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenEditRoomModal({
@@ -569,21 +570,24 @@ export default function RoomMapPortal() {
                             position: 'absolute',
                             top: '4px',
                             right: '4px',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            border: '1px solid var(--border-color)',
+                            backgroundColor: '#2563eb',
+                            color: '#ffffff',
+                            border: 'none',
                             borderRadius: '4px',
-                            padding: '2px 4px',
+                            padding: '2px 5px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--text-secondary)',
-                            zIndex: 2
+                            gap: '2px',
+                            fontSize: '0.65rem',
+                            fontWeight: '600',
+                            zIndex: 10,
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.4)'
                           }}
                           title={`Edit Room ${room.roomNumber}`}
                         >
-                          <Pencil size={10} />
-                        </div>
+                          <Pencil size={11} style={{ strokeWidth: 2.5 }} /> Edit
+                        </button>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <Bed size={14} style={{ opacity: 0.8 }} />
