@@ -1274,7 +1274,6 @@ export default function ProjectDetail() {
             </div>
           </div>
         </div>
-      )}
 
       {/* Guest RSVP Modal (Add / Edit) */}
       {activeGuestModal && (
