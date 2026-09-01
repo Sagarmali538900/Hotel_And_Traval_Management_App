@@ -551,6 +551,40 @@ export default function RoomMapPortal() {
                         }}
                         title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
+                        {/* Quick Edit Button in Top-Right Corner of Seat Tile */}
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditRoomModal({
+                              hotelName: hotel.hotelName,
+                              roomNumber: room.roomNumber,
+                              occupants: room.occupants,
+                              roomCostPerDay: room.roomCostPerDay || 0,
+                              daysUsed: room.daysUsed || 1,
+                              inDate: inDate,
+                              notes: room.notes || ''
+                            });
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            padding: '2px 4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--text-secondary)',
+                            zIndex: 2
+                          }}
+                          title={`Edit Room ${room.roomNumber}`}
+                        >
+                          <Pencil size={10} />
+                        </div>
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <Bed size={14} style={{ opacity: 0.8 }} />
                           <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>{room.roomNumber}</span>
