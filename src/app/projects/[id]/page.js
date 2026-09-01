@@ -146,8 +146,77 @@ export default function ProjectDetail() {
     } catch (err) {
       console.error(err);
       alert('Error updating status');
+  // Edit Room Modal States
+  const [showEditRoomModal, setShowEditRoomModal] = useState(false);
+  const [editRoomForm, setEditRoomForm] = useState({
+    oldHotelName: '',
+    oldRoomNumber: '',
+    newHotelName: '',
+    newRoomNumber: '',
+    roomCostPerDay: 0,
+    daysUsed: 1,
+    bookingDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+  const [editingRoom, setEditingRoom] = useState(false);
+  const [editRoomError, setEditRoomError] = useState('');
+
+  const handleEditRoomFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditRoomForm(prev => ({
+      ...prev,
+      [name]: name === 'daysUsed' ? parseInt(value) || 1 :
+              name === 'roomCostPerDay' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleOpenEditRoomModal = (rg) => {
+    setEditRoomForm({
+      oldHotelName: rg.hotelName || '',
+      oldRoomNumber: rg.roomNumber || '',
+      newHotelName: rg.hotelName || '',
+      newRoomNumber: rg.roomNumber || '',
+      roomCostPerDay: rg.roomCostPerDay || 0,
+      daysUsed: rg.daysUsed || 1,
+      bookingDate: rg.inDate ? new Date(rg.inDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      notes: rg.notes || ''
+    });
+    setEditRoomError('');
+    setShowEditRoomModal(true);
+  };
+
+  const handleUpdateRoom = async (e) => {
+    e.preventDefault();
+    if (!editRoomForm.newHotelName.trim() || !editRoomForm.newRoomNumber.trim()) {
+      setEditRoomError('Hotel name and Room number are required');
+      return;
+    }
+
+    setEditingRoom(true);
+    setEditRoomError('');
+
+    try {
+      const res = await fetch('/api/hotels', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: id,
+          ...editRoomForm
+        })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setShowEditRoomModal(false);
+        await fetchProjectDetails();
+      } else {
+        setEditRoomError(json.error || 'Failed to update room');
+      }
+    } catch (err) {
+      console.error(err);
+      setEditRoomError('Failed to update room');
     } finally {
-      setUpdatingStatus(false);
+      setEditingRoom(false);
     }
   };
 
@@ -949,7 +1018,8 @@ export default function ProjectDetail() {
                         <th>Check-out (OUT) Date</th>
                         <th>Duration</th>
                         <th>Nightly Rate</th>
-                        <th style={{ textAlign: 'right', paddingRight: 0 }}>Total Room Cost</th>
+                        <th>Total Room Cost</th>
+                        <th className="no-print" style={{ textAlign: 'right', paddingRight: 0 }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -977,8 +1047,20 @@ export default function ProjectDetail() {
                           </td>
                           <td>{rg.daysUsed} {rg.daysUsed === 1 ? 'night' : 'nights'}</td>
                           <td>{rg.roomCostPerDay > 0 ? `₹${rg.roomCostPerDay.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ textAlign: 'right', paddingRight: 0, fontWeight: '700' }}>
+                          <td style={{ fontWeight: '700' }}>
                             {rg.totalCost > 0 ? `₹${rg.totalCost.toLocaleString('en-IN')}` : '-'}
+                          </td>
+                          <td className="no-print" style={{ textAlign: 'right', paddingRight: 0 }}>
+                            {!rg.isUnallocated && (
+                              <button
+                                onClick={() => handleOpenEditRoomModal(rg)}
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Edit Room details, rate, and stay duration"
+                              >
+                                <Edit3 size={13} /> Edit
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -986,7 +1068,7 @@ export default function ProjectDetail() {
                         <td colSpan="6" style={{ borderBottom: 'none', paddingLeft: 0, fontWeight: '700', fontSize: '1rem' }}>
                           Total Hotel Lodging Expenditure
                         </td>
-                        <td style={{ borderBottom: 'none', textAlign: 'right', paddingRight: 0, fontWeight: '800', fontSize: '1.15rem', color: 'var(--accent-blue)' }}>
+                        <td colSpan="2" style={{ borderBottom: 'none', textAlign: 'right', paddingRight: 0, fontWeight: '800', fontSize: '1.15rem', color: 'var(--accent-blue)' }}>
                           ₹{totalLodgingCost.toLocaleString('en-IN')}
                         </td>
                       </tr>
@@ -1591,6 +1673,135 @@ export default function ProjectDetail() {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={guestSubmitting}>
                   {guestSubmitting ? <Loader2 size={16} className="spinner" /> : 'Save RSVP'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {/* Edit Room Modal Overlay */}
+      {showEditRoomModal && (
+        <div className="modal-overlay no-print" style={{ zIndex: 1000 }}>
+          <div className="modal-card" style={{ maxWidth: '450px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit3 size={18} style={{ color: 'var(--accent-blue)' }} /> Edit Room {editRoomForm.oldRoomNumber}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowEditRoomModal(false);
+                  setEditRoomError('');
+                }} 
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateRoom}>
+              <div className="form-group">
+                <label className="form-label">Hotel Name</label>
+                <input
+                  type="text"
+                  name="newHotelName"
+                  className="form-input"
+                  placeholder="e.g. Clark inn"
+                  value={editRoomForm.newHotelName}
+                  onChange={handleEditRoomFormChange}
+                  required
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Room Number / Block</label>
+                  <input
+                    type="text"
+                    name="newRoomNumber"
+                    className="form-input"
+                    placeholder="e.g. 502"
+                    value={editRoomForm.newRoomNumber}
+                    onChange={handleEditRoomFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Full Room Nightly Rate (₹)</label>
+                  <input
+                    type="number"
+                    name="roomCostPerDay"
+                    className="form-input"
+                    min="0"
+                    placeholder="4000"
+                    value={editRoomForm.roomCostPerDay || ''}
+                    onChange={handleEditRoomFormChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Stay Duration (Nights)</label>
+                  <input
+                    type="number"
+                    name="daysUsed"
+                    className="form-input"
+                    min="1"
+                    value={editRoomForm.daysUsed}
+                    onChange={handleEditRoomFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Check-in Date</label>
+                  <input
+                    type="date"
+                    name="bookingDate"
+                    className="form-input"
+                    value={editRoomForm.bookingDate}
+                    onChange={handleEditRoomFormChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              {editRoomForm.daysUsed > 0 && editRoomForm.roomCostPerDay > 0 && (
+                <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '0.6rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-blue)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Total Calculated Room Cost:</span>
+                  <strong style={{ fontSize: '0.95rem' }}>₹{(editRoomForm.daysUsed * editRoomForm.roomCostPerDay).toLocaleString('en-IN')}</strong>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Notes (Optional)</label>
+                <textarea
+                  name="notes"
+                  className="form-input"
+                  placeholder="e.g. Deluxe Suite, double occupancy..."
+                  rows="2"
+                  value={editRoomForm.notes}
+                  onChange={handleEditRoomFormChange}
+                />
+              </div>
+
+              {editRoomError && (
+                <p style={{ color: 'var(--accent-rose)', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertTriangle size={14} /> {editRoomError}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowEditRoomModal(false);
+                    setEditRoomError('');
+                  }} 
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={editingRoom}>
+                  {editingRoom ? <Loader2 size={16} className="spinner" /> : 'Save Changes'}
                 </button>
               </div>
             </form>
