@@ -464,6 +464,101 @@ export default function ProjectDetail() {
     return acc;
   }, { totalGuests: 0, trainGuests: 0, flightGuests: 0, checkedInGuests: 0 });
 
+  // Compile Room-by-Room data structure for the printable ledger
+  const roomGroupsMap = {};
+
+  // 1. Process general hotel bulk blocks
+  hotelBookings.forEach(hb => {
+    const hotel = (hb.hotelName || 'Unspecified Hotel').trim();
+    const room = (hb.roomNumber || 'Unassigned').trim();
+    const key = `${hotel.toLowerCase()}-${room.toLowerCase()}`;
+    
+    if (!roomGroupsMap[key]) {
+      roomGroupsMap[key] = {
+        hotelName: hotel,
+        roomNumber: room,
+        occupants: [],
+        inDate: hb.bookingDate ? new Date(hb.bookingDate).toISOString() : null,
+        outDate: null,
+        daysUsed: hb.daysUsed || 1,
+        roomCostPerDay: hb.roomCostPerDay || 0,
+        totalCost: hb.totalCost || (hb.daysUsed * (hb.roomCostPerDay || 0))
+      };
+      if (hb.bookingDate && hb.daysUsed) {
+        const d = new Date(hb.bookingDate);
+        d.setDate(d.getDate() + hb.daysUsed);
+        roomGroupsMap[key].outDate = d.toISOString();
+      }
+    }
+  });
+
+  // 2. Process guest stays (grouping by Hotel + Room Number)
+  guests.forEach(g => {
+    const hotel = (g.hotelName || '').trim();
+    const room = (g.roomNumber || '').trim();
+    
+    if (room) {
+      const key = `${(hotel || 'default').toLowerCase()}-${room.toLowerCase()}`;
+      const checkIn = g.checkInDate || g.arrivalDate;
+      const checkOut = g.checkOutDate || g.departureDate;
+      
+      if (!roomGroupsMap[key]) {
+        roomGroupsMap[key] = {
+          hotelName: hotel || 'Assigned Hotel',
+          roomNumber: room,
+          occupants: [g],
+          inDate: checkIn ? new Date(checkIn).toISOString() : null,
+          outDate: checkOut ? new Date(checkOut).toISOString() : null,
+          daysUsed: g.daysUsed || 1,
+          roomCostPerDay: g.roomCostPerDay || 0,
+          totalCost: g.hotelCost || (g.daysUsed * (g.roomCostPerDay || 0))
+        };
+      } else {
+        roomGroupsMap[key].occupants.push(g);
+        if (checkIn && (!roomGroupsMap[key].inDate || new Date(checkIn) < new Date(roomGroupsMap[key].inDate))) {
+          roomGroupsMap[key].inDate = new Date(checkIn).toISOString();
+        }
+        if (checkOut && (!roomGroupsMap[key].outDate || new Date(checkOut) > new Date(roomGroupsMap[key].outDate))) {
+          roomGroupsMap[key].outDate = new Date(checkOut).toISOString();
+        }
+        if (g.hotelCost > roomGroupsMap[key].totalCost) {
+          roomGroupsMap[key].totalCost = g.hotelCost;
+          roomGroupsMap[key].roomCostPerDay = g.roomCostPerDay;
+        }
+      }
+    } else {
+      const key = `unallocated-${g._id}`;
+      const checkIn = g.checkInDate || g.arrivalDate;
+      const checkOut = g.checkOutDate || g.departureDate;
+      roomGroupsMap[key] = {
+        hotelName: 'Unallocated Stay',
+        roomNumber: 'Pending',
+        occupants: [g],
+        inDate: checkIn ? new Date(checkIn).toISOString() : null,
+        outDate: checkOut ? new Date(checkOut).toISOString() : null,
+        daysUsed: g.daysUsed || 0,
+        roomCostPerDay: g.roomCostPerDay || 0,
+        totalCost: g.hotelCost || 0,
+        isUnallocated: true
+      };
+    }
+  });
+
+  const roomGroups = Object.values(roomGroupsMap).sort((a, b) => {
+    if (a.isUnallocated && !b.isUnallocated) return 1;
+    if (!a.isUnallocated && b.isUnallocated) return -1;
+    
+    const hotelComp = a.hotelName.localeCompare(b.hotelName);
+    if (hotelComp !== 0) return hotelComp;
+
+    const numA = parseInt(a.roomNumber, 10);
+    const numB = parseInt(b.roomNumber, 10);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.roomNumber.localeCompare(b.roomNumber);
+  });
+
+  const totalLodgingCost = roomGroups.reduce((sum, rg) => sum + (rg.totalCost || 0), 0);
+
   return (
     <div>
       {/* Top action header bar */}
@@ -805,66 +900,67 @@ export default function ProjectDetail() {
           </div>
 
           <div className="invoice-body">
-            {/* Section 1: Attendee Lodging (Guest-centric) */}
+            {/* Section 1: Room-by-Room Hotel Accommodations */}
             <div className="invoice-section">
               <h3 className="invoice-section-title">
                 <Building size={18} style={{ color: 'var(--accent-blue)' }} /> 
-                1. Attendee Room Accommodations
+                1. Room-by-Room Hotel Accommodations & Lodging Ledger
               </h3>
               
-              {guests.length === 0 ? (
+              {roomGroups.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', padding: '1rem 0' }}>
-                  No guest stays or room details registered for this event.
+                  No room accommodations registered for this event.
                 </p>
               ) : (
                 <div className="table-container" style={{ border: 'none' }}>
                   <table className="table">
                     <thead>
                       <tr>
-                        <th style={{ paddingLeft: 0 }}>Guest Name</th>
-                        <th>Hotel Stay details</th>
-                        <th>Room Number</th>
-                        <th>Check-in / Check-out</th>
-                        <th>Duration (Nights)</th>
-                        <th>Nightly Price</th>
-                        <th style={{ textAlign: 'right', paddingRight: 0 }}>Subtotal</th>
+                        <th style={{ paddingLeft: 0 }}>Room # & Hotel</th>
+                        <th>Occupant Guests</th>
+                        <th>Check-in (IN) Date</th>
+                        <th>Check-out (OUT) Date</th>
+                        <th>Duration</th>
+                        <th>Nightly Rate</th>
+                        <th style={{ textAlign: 'right', paddingRight: 0 }}>Total Room Cost</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedGuests.map((g) => (
-                        <tr key={g._id}>
-                          <td style={{ paddingLeft: 0, fontWeight: '600' }}>{g.guestName}</td>
-                          <td>{g.hotelName || <span style={{ color: 'var(--text-muted)' }}>N/A</span>}</td>
+                      {roomGroups.map((rg, idx) => (
+                        <tr key={idx}>
+                          <td style={{ paddingLeft: 0, fontWeight: '700' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="badge badge-info" style={{ fontSize: '0.8rem' }}>Room {rg.roomNumber}</span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{rg.hotelName}</div>
+                          </td>
                           <td>
-                            {g.roomNumber ? (
-                              <span className="badge badge-info">{g.roomNumber}</span>
-                            ) : (
-                              <span style={{ color: 'var(--accent-rose)', fontSize: '0.8rem' }}>Unallocated: {g.roomNotAvailableReason}</span>
+                            <div style={{ fontWeight: '600' }}>
+                              {rg.occupants.map(o => o.guestName).join(', ') || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Unassigned Block</span>}
+                            </div>
+                            {rg.occupants.length > 1 && (
+                              <span className="badge badge-success" style={{ fontSize: '0.65rem', marginTop: '2px' }}>Double Occupancy</span>
                             )}
                           </td>
                           <td>
-                            {g.checkInDate ? (
-                              <div style={{ fontSize: '0.85rem' }}>
-                                {new Date(g.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} -{' '}
-                                {new Date(g.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)' }}>N/A</span>
-                            )}
+                            {rg.inDate ? new Date(rg.inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
                           </td>
-                          <td>{g.daysUsed} nights</td>
-                          <td>{g.roomCostPerDay > 0 ? `₹${g.roomCostPerDay.toLocaleString('en-IN')}` : '-'}</td>
-                          <td style={{ textAlign: 'right', paddingRight: 0, fontWeight: '600' }}>
-                            {g.hotelCost > 0 ? `₹${g.hotelCost.toLocaleString('en-IN')}` : '-'}
+                          <td>
+                            {rg.outDate ? new Date(rg.outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
+                          </td>
+                          <td>{rg.daysUsed} {rg.daysUsed === 1 ? 'night' : 'nights'}</td>
+                          <td>{rg.roomCostPerDay > 0 ? `₹${rg.roomCostPerDay.toLocaleString('en-IN')}` : '-'}</td>
+                          <td style={{ textAlign: 'right', paddingRight: 0, fontWeight: '700' }}>
+                            {rg.totalCost > 0 ? `₹${rg.totalCost.toLocaleString('en-IN')}` : '-'}
                           </td>
                         </tr>
                       ))}
-                      <tr>
-                        <td colSpan="6" style={{ borderBottom: 'none', paddingLeft: 0, fontWeight: '700', fontSize: '0.95rem' }}>
-                          Attendee Lodging Total Expenditure
+                      <tr style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                        <td colSpan="6" style={{ borderBottom: 'none', paddingLeft: 0, fontWeight: '700', fontSize: '1rem' }}>
+                          Total Hotel Lodging Expenditure
                         </td>
-                        <td style={{ borderBottom: 'none', textAlign: 'right', paddingRight: 0, fontWeight: '800', fontSize: '1.1rem', color: 'var(--accent-blue)' }}>
-                          ₹{totalGuestHotelCost.toLocaleString('en-IN')}
+                        <td style={{ borderBottom: 'none', textAlign: 'right', paddingRight: 0, fontWeight: '800', fontSize: '1.15rem', color: 'var(--accent-blue)' }}>
+                          ₹{totalLodgingCost.toLocaleString('en-IN')}
                         </td>
                       </tr>
                     </tbody>
@@ -1022,7 +1118,7 @@ export default function ProjectDetail() {
                           <tr key={b._id}>
                             <td style={{ paddingLeft: 0 }}>
                               <div style={{ fontWeight: '600' }}>{b.guestName}</div>
-                              {b.guestMobile && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 {g.guestMobile}</div>}
+                              {b.guestMobile && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 {b.guestMobile}</div>}
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Persons: {b.numberOfGuests}</div>
                             </td>
                             <td>
@@ -1054,22 +1150,16 @@ export default function ProjectDetail() {
             <div className="invoice-summary">
               <div className="invoice-summary-grid">
                 <div className="summary-row">
-                  <span style={{ color: 'var(--text-secondary)' }}>Attendee Room Lodging:</span>
-                  <span>₹{totalGuestHotelCost.toLocaleString('en-IN')}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>Room-by-Room Hotel Accommodations:</span>
+                  <span>₹{totalLodgingCost.toLocaleString('en-IN')}</span>
                 </div>
-                {hotelBookings.length > 0 && (
-                  <div className="summary-row">
-                    <span style={{ color: 'var(--text-secondary)' }}>Hotel Bulk Blocks:</span>
-                    <span>₹{totalHotelCost.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
                 <div className="summary-row">
                   <span style={{ color: 'var(--text-secondary)' }}>Transport & Fleets:</span>
                   <span>₹{totalTransportCost.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="summary-row summary-row-total">
                   <span>Grand Total:</span>
-                  <span>₹{grandTotal.toLocaleString('en-IN')}</span>
+                  <span>₹{(totalLodgingCost + totalTransportCost).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
