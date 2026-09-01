@@ -959,7 +959,7 @@ export default function RoomMapPortal() {
       {/* Edit Room Modal Overlay */}
       {showEditRoomModal && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal-card" style={{ maxWidth: '450px', padding: '1.5rem' }}>
+          <div className="modal-card" style={{ maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Pencil size={18} style={{ color: 'var(--accent-blue)' }} /> Edit Room {editRoomForm.oldRoomNumber}
@@ -1078,8 +1078,32 @@ export default function RoomMapPortal() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={editingRoom}>
-                  {editingRoom ? <Loader2 size={16} className="spinner" /> : 'Save Changes'}
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={editingRoom}
+                  style={{
+                    backgroundColor: '#2563eb',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    padding: '0.6rem 1.25rem',
+                    fontSize: '0.9rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {editingRoom ? (
+                    <>
+                      <Loader2 size={16} className="spinner" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} /> Save Changes
+                    </>
+                  )}
                 </button>
               </div>
             </form>
