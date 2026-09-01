@@ -1007,6 +1007,8 @@ export default function RoomMapPortal() {
             </form>
           </div>
         </div>
+      )}
+
       {/* Edit Room Modal Overlay */}
       {showEditRoomModal && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
