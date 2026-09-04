@@ -23,10 +23,15 @@ import {
 
 const parseDateParts = (dateInput) => {
   if (!dateInput) return null;
-  let str = typeof dateInput === 'string' ? dateInput.split('T')[0] : '';
-  if (!str && dateInput instanceof Date) {
+  let str = '';
+  if (typeof dateInput === 'string') {
+    str = dateInput.split('T')[0];
+  } else if (dateInput instanceof Date) {
     try { str = dateInput.toISOString().split('T')[0]; } catch(e){}
+  } else {
+    str = String(dateInput).split('T')[0];
   }
+
   const parts = str.split('-');
   if (parts.length === 3) {
     const y = parseInt(parts[0], 10);
@@ -36,6 +41,7 @@ const parseDateParts = (dateInput) => {
       return new Date(y, m, d);
     }
   }
+
   const dt = new Date(dateInput);
   return isNaN(dt.getTime()) ? null : dt;
 };
