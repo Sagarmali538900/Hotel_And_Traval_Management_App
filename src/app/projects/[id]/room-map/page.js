@@ -21,6 +21,13 @@ import {
   Pencil
 } from 'lucide-react';
 
+const formatDateSafe = (d) => {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+};
+
 export default function RoomMapPortal() {
   const params = useParams();
   const { id } = params;
@@ -542,10 +549,14 @@ export default function RoomMapPortal() {
                       room.occupants.forEach(o => {
                         const checkIn = o.checkInDate || o.arrivalDate;
                         const checkOut = o.checkOutDate || o.departureDate;
-                        if (checkIn && (!inDate || new Date(checkIn) < new Date(inDate))) inDate = checkIn;
-                        if (checkOut && (!outDate || new Date(checkOut) > new Date(outDate))) outDate = checkOut;
+                        if (checkIn && !isNaN(new Date(checkIn).getTime())) {
+                          if (!inDate || new Date(checkIn) < new Date(inDate)) inDate = checkIn;
+                        }
+                        if (checkOut && !isNaN(new Date(checkOut).getTime())) {
+                          if (!outDate || new Date(checkOut) > new Date(outDate)) outDate = checkOut;
+                        }
                       });
-                    } else if (room.bookingDate) {
+                    } else if (room.bookingDate && !isNaN(new Date(room.bookingDate).getTime())) {
                       inDate = room.bookingDate;
                       if (room.daysUsed) {
                         const d = new Date(room.bookingDate);
@@ -554,8 +565,8 @@ export default function RoomMapPortal() {
                       }
                     }
 
-                    const formattedIn = inDate ? new Date(inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
-                    const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+                    const formattedIn = formatDateSafe(inDate);
+                    const formattedOut = formatDateSafe(outDate);
 
                     return (
                       <button
@@ -706,9 +717,9 @@ export default function RoomMapPortal() {
                           {/* Stay IN and OUT dates */}
                           <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} /> 
-                            <span>IN: {occ.checkInDate ? new Date(occ.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.arrivalDate ? new Date(occ.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                            <span>IN: {formatDateSafe(occ.checkInDate || occ.arrivalDate) || 'TBD'}</span>
                             <span>•</span>
-                            <span>OUT: {occ.checkOutDate ? new Date(occ.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.departureDate ? new Date(occ.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                            <span>OUT: {formatDateSafe(occ.checkOutDate || occ.departureDate) || 'TBD'}</span>
                           </div>
                           
                           {/* Live check-in badge switch */}
