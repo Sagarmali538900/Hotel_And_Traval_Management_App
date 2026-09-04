@@ -81,8 +81,21 @@ export async function PUT(request) {
       booking.roomNumber = targetRoom;
       booking.roomCostPerDay = rate;
       booking.daysUsed = duration;
-      booking.totalCost = totalCost;
-      if (bookingDate) booking.bookingDate = bookingDate;
+      if (bookingDate) {
+        const parts = String(bookingDate).split('T')[0].split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+            booking.bookingDate = new Date(y, m, d);
+          } else {
+            booking.bookingDate = new Date(bookingDate);
+          }
+        } else {
+          booking.bookingDate = new Date(bookingDate);
+        }
+      }
       if (notes !== undefined) booking.notes = notes;
       await booking.save();
     } else if (targetHotel && targetRoom) {

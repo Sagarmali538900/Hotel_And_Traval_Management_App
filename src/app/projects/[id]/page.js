@@ -1217,10 +1217,22 @@ export default function ProjectDetail() {
                             )}
                           </td>
                           <td>
-                            {rg.inDate ? new Date(rg.inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
+                            {rg.inDate ? (() => {
+                              const dt = new Date(rg.inDate);
+                              if (isNaN(dt.getTime())) return 'TBD';
+                              const day = String(dt.getDate()).padStart(2, '0');
+                              const month = String(dt.getMonth() + 1).padStart(2, '0');
+                              return `${day}/${month}/${dt.getFullYear()}`;
+                            })() : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
                           </td>
                           <td>
-                            {rg.outDate ? new Date(rg.outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
+                            {rg.outDate ? (() => {
+                              const dt = new Date(rg.outDate);
+                              if (isNaN(dt.getTime())) return 'TBD';
+                              const day = String(dt.getDate()).padStart(2, '0');
+                              const month = String(dt.getMonth() + 1).padStart(2, '0');
+                              return `${day}/${month}/${dt.getFullYear()}`;
+                            })() : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>TBD</span>}
                           </td>
                           <td>{rg.daysUsed} {rg.daysUsed === 1 ? 'night' : 'nights'}</td>
                           <td>{rg.roomCostPerDay > 0 ? `₹${rg.roomCostPerDay.toLocaleString('en-IN')}` : '-'}</td>

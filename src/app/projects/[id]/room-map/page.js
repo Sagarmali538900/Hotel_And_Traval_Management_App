@@ -43,7 +43,10 @@ const parseDateParts = (dateInput) => {
 const formatDateSafe = (d) => {
   const dt = parseDateParts(d);
   if (!dt) return null;
-  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  const day = String(dt.getDate()).padStart(2, '0');
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const year = dt.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 export default function RoomMapPortal() {
@@ -274,7 +277,10 @@ export default function RoomMapPortal() {
         roomNumber: room,
         isBulkBlock: true,
         daysUsed: hb.daysUsed,
-        roomCostPerDay: hb.roomCostPerDay
+        roomCostPerDay: hb.roomCostPerDay,
+        bookingDate: hb.bookingDate,
+        inDate: hb.bookingDate,
+        notes: hb.notes
       };
     }
   });
@@ -291,8 +297,13 @@ export default function RoomMapPortal() {
       if (!roomsByHotel[hotel][room]) {
         roomsByHotel[hotel][room] = {
           roomNumber: room,
-          isBulkBlock: false
+          isBulkBlock: false,
+          daysUsed: g.daysUsed || 1,
+          roomCostPerDay: g.roomCostPerDay || 0,
+          bookingDate: g.checkInDate || g.arrivalDate
         };
+      } else if (!roomsByHotel[hotel][room].bookingDate) {
+        roomsByHotel[hotel][room].bookingDate = g.checkInDate || g.arrivalDate;
       }
     }
   });
