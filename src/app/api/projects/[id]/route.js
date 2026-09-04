@@ -77,15 +77,39 @@ export async function GET(request, { params }) {
 
     Object.values(roomMap).forEach(r => {
       if (r.isUnallocated) return;
-      if (r.checkIn && r.checkOut) {
-        const dIn = new Date(r.checkIn);
-        const dOut = new Date(r.checkOut);
-        const diffMs = dOut.getTime() - dIn.getTime();
-        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays > 0) {
-          r.days = Math.max(r.days || 1, diffDays);
+
+      const parseDateLocal = (dateInput) => {
+        if (!dateInput) return null;
+        if (dateInput instanceof Date) return dateInput;
+        const str = String(dateInput).split('T')[0];
+        const parts = str.split('-');
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+        return new Date(dateInput);
+      };
+
+      if (r.bulkBlock && r.bulkBlock.daysUsed) {
+        r.days = r.bulkBlock.daysUsed;
+        if (r.checkIn) {
+          const dIn = parseDateLocal(r.checkIn);
+          if (dIn) {
+            const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(r.days));
+            r.checkOut = dOut.toISOString();
+          }
+        }
+      } else if (r.checkIn && r.checkOut) {
+        const dIn = parseDateLocal(r.checkIn);
+        const dOut = parseDateLocal(r.checkOut);
+        if (dIn && dOut) {
+          const diffMs = dOut.getTime() - dIn.getTime();
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays > 0) {
+            r.days = diffDays;
+          }
         }
       }
+
       if (r.bulkBlock && r.bulkBlock.roomCostPerDay > 0) {
         r.rate = r.bulkBlock.roomCostPerDay;
       } else if (r.occupants && r.occupants.length > 0) {

@@ -835,14 +835,36 @@ export default function ProjectDetail() {
   Object.values(roomGroupsMap).forEach(rg => {
     if (rg.isUnallocated) return;
 
-    // 1. Calculate duration (daysUsed) from stay dates
-    if (rg.inDate && rg.outDate) {
-      const dIn = new Date(rg.inDate);
-      const dOut = new Date(rg.outDate);
-      const diffMs = dOut.getTime() - dIn.getTime();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays > 0) {
-        rg.daysUsed = Math.max(rg.daysUsed || 1, diffDays);
+    const parseDateLocal = (dateInput) => {
+      if (!dateInput) return null;
+      if (dateInput instanceof Date) return dateInput;
+      const str = String(dateInput).split('T')[0];
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      }
+      return new Date(dateInput);
+    };
+
+    // 1. Synchronize inDate, outDate, and daysUsed (nights) strictly
+    if (rg.bulkBlock && rg.bulkBlock.daysUsed) {
+      rg.daysUsed = rg.bulkBlock.daysUsed;
+      if (rg.inDate) {
+        const dIn = parseDateLocal(rg.inDate);
+        if (dIn) {
+          const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(rg.daysUsed));
+          rg.outDate = dOut.toISOString();
+        }
+      }
+    } else if (rg.inDate && rg.outDate) {
+      const dIn = parseDateLocal(rg.inDate);
+      const dOut = parseDateLocal(rg.outDate);
+      if (dIn && dOut) {
+        const diffMs = dOut.getTime() - dIn.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+          rg.daysUsed = diffDays;
+        }
       }
     }
 
@@ -852,7 +874,6 @@ export default function ProjectDetail() {
     } else if (rg.occupants.length > 0) {
       const maxRate = Math.max(...rg.occupants.map(o => o.roomCostPerDay || 0));
       const sumRates = rg.occupants.reduce((sum, o) => sum + (o.roomCostPerDay || 0), 0);
-      // If any occupant has full room rate (>= 3000), use maxRate. Otherwise if split across occupants, sum rates.
       rg.roomCostPerDay = maxRate >= 3000 ? maxRate : sumRates;
     }
 
