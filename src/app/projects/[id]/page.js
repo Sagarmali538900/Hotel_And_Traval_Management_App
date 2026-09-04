@@ -318,6 +318,36 @@ export default function ProjectDetail() {
     }
   };
 
+  const [deletingRoom, setDeletingRoom] = useState(false);
+
+  const handleDeleteRoom = async (targetRoomNumber) => {
+    const rm = targetRoomNumber || editRoomForm.oldRoomNumber;
+    if (!rm) return;
+
+    if (!confirm(`Are you sure you want to delete Room ${rm}? Any assigned guests will be unallocated.`)) {
+      return;
+    }
+
+    setDeletingRoom(true);
+    try {
+      const res = await fetch(`/api/hotels?projectId=${id}&roomNumber=${encodeURIComponent(rm)}`, {
+        method: 'DELETE'
+      });
+      const json = await res.json();
+      if (json.success) {
+        setShowEditRoomModal(false);
+        await fetchProjectDetails();
+      } else {
+        alert(json.error || 'Failed to delete room');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete room');
+    } finally {
+      setDeletingRoom(false);
+    }
+  };
+
   const handleGuestInputChange = (e) => {
     const { name, value } = e.target;
     setGuestForm(prev => ({
@@ -1183,14 +1213,24 @@ export default function ProjectDetail() {
                           </td>
                           <td className="no-print" style={{ textAlign: 'right', paddingRight: 0 }}>
                             {!rg.isUnallocated && (
-                              <button
-                                onClick={() => handleOpenEditRoomModal(rg)}
-                                className="btn btn-secondary"
-                                style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                title="Edit Room details, rate, and stay duration"
-                              >
-                                <Edit3 size={13} /> Edit
-                              </button>
+                              <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                <button
+                                  onClick={() => handleOpenEditRoomModal(rg)}
+                                  className="btn btn-secondary"
+                                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Edit Room details, rate, and stay duration"
+                                >
+                                  <Edit3 size={13} /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRoom(rg.roomNumber)}
+                                  className="btn btn-danger"
+                                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Delete Room block"
+                                >
+                                  <Trash2 size={13} /> Delete
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -1945,7 +1985,28 @@ export default function ProjectDetail() {
                 </p>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', alignItems: 'center' }}>
+                <button 
+                  type="button" 
+                  onClick={() => handleDeleteRoom(editRoomForm.oldRoomNumber)}
+                  className="btn btn-danger"
+                  disabled={deletingRoom}
+                  style={{
+                    marginRight: 'auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#dc2626',
+                    borderColor: '#dc2626',
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    padding: '0.6rem 1rem',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {deletingRoom ? <Loader2 size={16} className="spinner" /> : <Trash2 size={16} />}
+                  Delete Room
+                </button>
                 <button 
                   type="button" 
                   onClick={() => {

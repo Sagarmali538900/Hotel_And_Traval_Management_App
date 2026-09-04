@@ -138,17 +138,35 @@ export async function DELETE(request) {
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const projectId = searchParams.get('projectId');
+    const roomNumber = searchParams.get('roomNumber');
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Booking ID is required' }, { status: 400 });
+    if (id) {
+      const booking = await HotelBooking.findByIdAndDelete(id);
+      if (booking) {
+        await Guest.updateMany(
+          { projectId: booking.projectId, roomNumber: booking.roomNumber },
+          { $set: { hotelName: 'Unallocated', roomNumber: 'Unallocated', hotelCost: 0, daysUsed: 1 } }
+        );
+      }
+      return NextResponse.json({ success: true, message: 'Hotel booking deleted successfully' });
     }
 
-    const booking = await HotelBooking.findByIdAndDelete(id);
-    if (!booking) {
-      return NextResponse.json({ success: false, error: 'Booking not found' }, { status: 404 });
+    if (projectId && roomNumber) {
+      await HotelBooking.deleteMany({
+        projectId,
+        roomNumber: { $regex: new RegExp(`^${roomNumber}$`, 'i') }
+      });
+
+      await Guest.updateMany(
+        { projectId, roomNumber: { $regex: new RegExp(`^${roomNumber}$`, 'i') } },
+        { $set: { hotelName: 'Unallocated', roomNumber: 'Unallocated', hotelCost: 0, daysUsed: 1 } }
+      );
+
+      return NextResponse.json({ success: true, message: 'Room deleted and occupants unallocated successfully' });
     }
 
-    return NextResponse.json({ success: true, message: 'Hotel booking deleted successfully' });
+    return NextResponse.json({ success: false, error: 'Booking ID or Project ID and Room Number are required' }, { status: 400 });
   } catch (error) {
     console.error('Error deleting hotel booking:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });

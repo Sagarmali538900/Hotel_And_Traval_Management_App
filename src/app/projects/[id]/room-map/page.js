@@ -120,6 +120,37 @@ export default function RoomMapPortal() {
     }
   };
 
+  const [deletingRoom, setDeletingRoom] = useState(false);
+
+  const handleDeleteRoom = async (targetRoomNumber) => {
+    const rm = targetRoomNumber || editRoomForm.oldRoomNumber;
+    if (!rm) return;
+
+    if (!confirm(`Are you sure you want to delete Room ${rm}? Any assigned occupants will be unallocated.`)) {
+      return;
+    }
+
+    setDeletingRoom(true);
+    try {
+      const res = await fetch(`/api/hotels?projectId=${id}&roomNumber=${encodeURIComponent(rm)}`, {
+        method: 'DELETE'
+      });
+      const json = await res.json();
+      if (json.success) {
+        setShowEditRoomModal(false);
+        setSelectedRoom(null);
+        await fetchProjectDetails();
+      } else {
+        alert(json.error || 'Failed to delete room');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete room');
+    } finally {
+      setDeletingRoom(false);
+    }
+  };
+
   const handleRoomFormChange = (e) => {
     const { name, value } = e.target;
     setNewRoomForm(prev => ({
@@ -623,6 +654,14 @@ export default function RoomMapPortal() {
                       >
                         <Pencil size={12} /> Edit Room
                       </button>
+                      <button
+                        onClick={() => handleDeleteRoom(selectedRoom.roomNumber)}
+                        className="btn btn-danger"
+                        style={{ padding: '0.15rem 0.45rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        title="Delete Room block"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
                     </div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{selectedRoom.hotelName}</p>
                   </div>
@@ -1067,7 +1106,28 @@ export default function RoomMapPortal() {
                 </p>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', alignItems: 'center' }}>
+                <button 
+                  type="button" 
+                  onClick={() => handleDeleteRoom(editRoomForm.oldRoomNumber)}
+                  className="btn btn-danger"
+                  disabled={deletingRoom}
+                  style={{
+                    marginRight: 'auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#dc2626',
+                    borderColor: '#dc2626',
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    padding: '0.6rem 1rem',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {deletingRoom ? <Loader2 size={16} className="spinner" /> : <Trash2 size={16} />}
+                  Delete Room
+                </button>
                 <button 
                   type="button" 
                   onClick={() => {
