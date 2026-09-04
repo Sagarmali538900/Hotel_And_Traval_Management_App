@@ -77,13 +77,6 @@ export default function RoomMapPortal() {
   };
 
   const handleOpenEditRoomModal = (room) => {
-    if (!room) return;
-    let bDate = new Date().toISOString().split('T')[0];
-    if (room.inDate && !isNaN(new Date(room.inDate).getTime())) {
-      try {
-        bDate = new Date(room.inDate).toISOString().split('T')[0];
-      } catch (e) {}
-    }
     setEditRoomForm({
       oldHotelName: room.hotelName || '',
       oldRoomNumber: room.roomNumber || '',
@@ -91,7 +84,7 @@ export default function RoomMapPortal() {
       newRoomNumber: room.roomNumber || '',
       roomCostPerDay: room.roomCostPerDay || 0,
       daysUsed: room.daysUsed || 1,
-      bookingDate: bDate,
+      bookingDate: room.inDate ? new Date(room.inDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       notes: room.notes || ''
     });
     setEditRoomError('');
@@ -131,37 +124,6 @@ export default function RoomMapPortal() {
       setEditRoomError('Failed to update room');
     } finally {
       setEditingRoom(false);
-    }
-  };
-
-  const [deletingRoom, setDeletingRoom] = useState(false);
-
-  const handleDeleteRoom = async (targetRoomNumber) => {
-    const rm = targetRoomNumber || editRoomForm.oldRoomNumber;
-    if (!rm) return;
-
-    if (!confirm(`Are you sure you want to delete Room ${rm}? Any assigned occupants will be unallocated.`)) {
-      return;
-    }
-
-    setDeletingRoom(true);
-    try {
-      const res = await fetch(`/api/hotels?projectId=${id}&roomNumber=${encodeURIComponent(rm)}`, {
-        method: 'DELETE'
-      });
-      const json = await res.json();
-      if (json.success) {
-        setShowEditRoomModal(false);
-        setSelectedRoom(null);
-        await fetchProjectDetails();
-      } else {
-        alert(json.error || 'Failed to delete room');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete room');
-    } finally {
-      setDeletingRoom(false);
     }
   };
 
@@ -227,13 +189,11 @@ export default function RoomMapPortal() {
         setData(json.data);
         
         // Refresh selected room detail if it's currently open
-        if (selectedRoom && selectedRoom.hotelName && selectedRoom.roomNumber) {
-          const freshGuests = json.data?.guests || [];
-          const sHotel = (selectedRoom.hotelName || '').trim().toLowerCase();
-          const sRoom = (selectedRoom.roomNumber || '').trim().toLowerCase();
+        if (selectedRoom) {
+          const freshGuests = json.data.guests || [];
           const occupants = freshGuests.filter(g => 
-            (g.hotelName || '').trim().toLowerCase() === sHotel &&
-            (g.roomNumber || '').trim().toLowerCase() === sRoom
+            (g.hotelName || '').trim().toLowerCase() === selectedRoom.hotelName.toLowerCase() &&
+            (g.roomNumber || '').trim().toLowerCase() === selectedRoom.roomNumber.toLowerCase()
           );
           setSelectedRoom({
             hotelName: selectedRoom.hotelName,
@@ -267,24 +227,25 @@ export default function RoomMapPortal() {
     );
   }
 
-  if (error || !data || !data.project) {
+  if (error) {
     return (
       <div className="card" style={{ maxWidth: '500px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
         <AlertTriangle size={48} style={{ color: 'var(--accent-rose)', marginBottom: '1rem' }} />
-        <h3 style={{ marginBottom: '0.5rem' }}>Room Map Unavailable</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{error || 'Project data could not be loaded'}</p>
+        <h3 style={{ marginBottom: '0.5rem' }}>Error Loading Data</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{error}</p>
         <Link href="/" className="btn btn-primary">Back to Dashboard</Link>
       </div>
     );
   }
 
-  const { project = {}, hotelBookings = [], guests = [] } = data;
+  const { project, hotelBookings = [], guests = [] } = data;
 
   // Compile list of unique hotels & room numbers
   const roomsByHotel = {};
 
   // 1. Gather rooms from bulk hotel blocks
-  hotelBookings.forEach(hb => {
+  (hotelBookings || []).forEach(hb => {
+    if (!hb) return;
     const hotel = (hb.hotelName || '').trim();
     const room = (hb.roomNumber || '').trim();
     if (room && hotel.toLowerCase() !== 'unallocated' && room.toLowerCase() !== 'unallocated' && hotel.toLowerCase() !== 'unassigned') {
@@ -301,7 +262,8 @@ export default function RoomMapPortal() {
   });
 
   // 2. Gather rooms from active guest allocations
-  guests.forEach(g => {
+  (guests || []).forEach(g => {
+    if (!g) return;
     const hotel = (g.hotelName || '').trim();
     const room = (g.roomNumber || '').trim();
     if (hotel && room && hotel.toLowerCase() !== 'unallocated' && room.toLowerCase() !== 'unallocated' && hotel.toLowerCase() !== 'unassigned') {
@@ -324,7 +286,7 @@ export default function RoomMapPortal() {
       const roomInfo = roomsMap[roomNum];
       
       // Find occupants in this room
-      const occupants = guests.filter(g => 
+      const occupants = (guests || []).filter(g => 
         (g.hotelName || '').trim().toLowerCase() === hotelName.toLowerCase() &&
         (g.roomNumber || '').trim().toLowerCase() === roomNum.toLowerCase()
       );
@@ -361,7 +323,8 @@ export default function RoomMapPortal() {
   });
 
   // Compile list of unallocated guests (who need a room)
-  const unallocatedGuests = guests.filter(g => {
+  const unallocatedGuests = (guests || []).filter(g => {
+    if (!g) return false;
     const rm = (g.roomNumber || '').trim().toLowerCase();
     const htl = (g.hotelName || '').trim().toLowerCase();
     return !rm || rm === 'unallocated' || rm === 'unassigned' || rm === 'none' || htl === 'unallocated' || htl === 'unassigned';
@@ -556,14 +519,10 @@ export default function RoomMapPortal() {
                       room.occupants.forEach(o => {
                         const checkIn = o.checkInDate || o.arrivalDate;
                         const checkOut = o.checkOutDate || o.departureDate;
-                        if (checkIn && !isNaN(new Date(checkIn).getTime())) {
-                          if (!inDate || new Date(checkIn) < new Date(inDate)) inDate = checkIn;
-                        }
-                        if (checkOut && !isNaN(new Date(checkOut).getTime())) {
-                          if (!outDate || new Date(checkOut) > new Date(outDate)) outDate = checkOut;
-                        }
+                        if (checkIn && (!inDate || new Date(checkIn) < new Date(inDate))) inDate = checkIn;
+                        if (checkOut && (!outDate || new Date(checkOut) > new Date(outDate))) outDate = checkOut;
                       });
-                    } else if (room.bookingDate && !isNaN(new Date(room.bookingDate).getTime())) {
+                    } else if (room.bookingDate) {
                       inDate = room.bookingDate;
                       if (room.daysUsed) {
                         const d = new Date(room.bookingDate);
@@ -572,8 +531,8 @@ export default function RoomMapPortal() {
                       }
                     }
 
-                    const formattedIn = formatDateSafe(inDate);
-                    const formattedOut = formatDateSafe(outDate);
+                    const formattedIn = inDate ? new Date(inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+                    const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
 
                     return (
                       <button
@@ -581,7 +540,7 @@ export default function RoomMapPortal() {
                         onClick={() => setSelectedRoom({
                           hotelName: hotel.hotelName,
                           roomNumber: room.roomNumber,
-                          occupants: room.occupants || [],
+                          occupants: room.occupants,
                           roomCostPerDay: room.roomCostPerDay || 0,
                           daysUsed: room.daysUsed || 1,
                           inDate: inDate,
@@ -604,7 +563,7 @@ export default function RoomMapPortal() {
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                           transform: isSelected ? 'scale(1.03)' : 'none',
                         }}
-                        title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${(room.occupants || []).map(o => o.guestName).join(', ') || 'Empty'}`}
+                        title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <Bed size={14} style={{ opacity: 0.8 }} />
@@ -629,9 +588,9 @@ export default function RoomMapPortal() {
                         </div>
                         
                         {/* Occupancy dots indicator */}
-                        {(room.occupants || []).length > 0 && (
+                        {room.occupants.length > 0 && (
                           <div style={{ display: 'flex', gap: '3px', position: 'absolute', bottom: '4px' }}>
-                            {(room.occupants || []).map(o => (
+                            {room.occupants.map(o => (
                               <span 
                                 key={o._id} 
                                 style={{ 
@@ -678,14 +637,6 @@ export default function RoomMapPortal() {
                       >
                         <Pencil size={12} /> Edit Room
                       </button>
-                      <button
-                        onClick={() => handleDeleteRoom(selectedRoom.roomNumber)}
-                        className="btn btn-danger"
-                        style={{ padding: '0.15rem 0.45rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        title="Delete Room block"
-                      >
-                        <Trash2 size={12} /> Delete
-                      </button>
                     </div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{selectedRoom.hotelName}</p>
                   </div>
@@ -698,13 +649,13 @@ export default function RoomMapPortal() {
                 </div>
 
                 {/* Occupants list */}
-                <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Occupants ({(selectedRoom.occupants || []).length}/2)</h5>
+                <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Occupants ({selectedRoom.occupants.length}/2)</h5>
                 
-                {(selectedRoom.occupants || []).length === 0 ? (
+                {selectedRoom.occupants.length === 0 ? (
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '1.5rem' }}>No guests assigned to this room.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    {(selectedRoom.occupants || []).map(occ => (
+                    {selectedRoom.occupants.map(occ => (
                       <div 
                         key={occ._id}
                         style={{ 
@@ -724,9 +675,9 @@ export default function RoomMapPortal() {
                           {/* Stay IN and OUT dates */}
                           <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} /> 
-                            <span>IN: {formatDateSafe(occ.checkInDate || occ.arrivalDate) || 'TBD'}</span>
+                            <span>IN: {occ.checkInDate ? new Date(occ.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.arrivalDate ? new Date(occ.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
                             <span>•</span>
-                            <span>OUT: {formatDateSafe(occ.checkOutDate || occ.departureDate) || 'TBD'}</span>
+                            <span>OUT: {occ.checkOutDate ? new Date(occ.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.departureDate ? new Date(occ.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
                           </div>
                           
                           {/* Live check-in badge switch */}
@@ -752,11 +703,13 @@ export default function RoomMapPortal() {
                         
                         <button
                           onClick={() => handleUnassignGuest(occ._id)}
-                          className="btn btn-secondary btn-icon"
                           style={{
+                            background: 'none',
+                            border: 'none',
                             color: 'var(--accent-rose)',
-                            padding: '0.3rem',
-                            borderRadius: '6px'
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px'
                           }}
                           title="Remove guest from room"
                         >
@@ -768,7 +721,7 @@ export default function RoomMapPortal() {
                 )}
 
                 {/* Assignment tool */}
-                {(selectedRoom.occupants || []).length < 2 && (
+                {selectedRoom.occupants.length < 2 && (
                   <form onSubmit={handleAssignGuest} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                     <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Assign Attendee</h5>
                     
@@ -1020,7 +973,7 @@ export default function RoomMapPortal() {
       {/* Edit Room Modal Overlay */}
       {showEditRoomModal && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal-card" style={{ maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem' }}>
+          <div className="modal-card" style={{ maxWidth: '450px', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Pencil size={18} style={{ color: 'var(--accent-blue)' }} /> Edit Room {editRoomForm.oldRoomNumber}
@@ -1128,28 +1081,7 @@ export default function RoomMapPortal() {
                 </p>
               )}
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', alignItems: 'center' }}>
-                <button 
-                  type="button" 
-                  onClick={() => handleDeleteRoom(editRoomForm.oldRoomNumber)}
-                  className="btn btn-danger"
-                  disabled={deletingRoom}
-                  style={{
-                    marginRight: 'auto',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: '#dc2626',
-                    borderColor: '#dc2626',
-                    color: '#ffffff',
-                    fontWeight: '600',
-                    padding: '0.6rem 1rem',
-                    fontSize: '0.85rem'
-                  }}
-                >
-                  {deletingRoom ? <Loader2 size={16} className="spinner" /> : <Trash2 size={16} />}
-                  Delete Room
-                </button>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                 <button 
                   type="button" 
                   onClick={() => {
@@ -1160,32 +1092,8 @@ export default function RoomMapPortal() {
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary" 
-                  disabled={editingRoom}
-                  style={{
-                    backgroundColor: '#2563eb',
-                    color: '#ffffff',
-                    fontWeight: '700',
-                    padding: '0.6rem 1.25rem',
-                    fontSize: '0.9rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {editingRoom ? (
-                    <>
-                      <Loader2 size={16} className="spinner" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={16} /> Save Changes
-                    </>
-                  )}
+                <button type="submit" className="btn btn-primary" disabled={editingRoom}>
+                  {editingRoom ? <Loader2 size={16} className="spinner" /> : 'Save Changes'}
                 </button>
               </div>
             </form>
