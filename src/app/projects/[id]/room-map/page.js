@@ -559,7 +559,7 @@ export default function RoomMapPortal() {
                         onClick={() => setSelectedRoom({
                           hotelName: hotel.hotelName,
                           roomNumber: room.roomNumber,
-                          occupants: room.occupants,
+                          occupants: room.occupants || [],
                           roomCostPerDay: room.roomCostPerDay || 0,
                           daysUsed: room.daysUsed || 1,
                           inDate: inDate,
@@ -582,7 +582,7 @@ export default function RoomMapPortal() {
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                           transform: isSelected ? 'scale(1.03)' : 'none',
                         }}
-                        title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${room.occupants.map(o => o.guestName).join(', ') || 'Empty'}`}
+                        title={`Room ${room.roomNumber} | IN: ${formattedIn || 'TBD'} | OUT: ${formattedOut || 'TBD'}\nOccupants: ${(room.occupants || []).map(o => o.guestName).join(', ') || 'Empty'}`}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
                           <Bed size={14} style={{ opacity: 0.8 }} />
@@ -607,9 +607,9 @@ export default function RoomMapPortal() {
                         </div>
                         
                         {/* Occupancy dots indicator */}
-                        {room.occupants.length > 0 && (
+                        {(room.occupants || []).length > 0 && (
                           <div style={{ display: 'flex', gap: '3px', position: 'absolute', bottom: '4px' }}>
-                            {room.occupants.map(o => (
+                            {(room.occupants || []).map(o => (
                               <span 
                                 key={o._id} 
                                 style={{ 
@@ -676,13 +676,13 @@ export default function RoomMapPortal() {
                 </div>
 
                 {/* Occupants list */}
-                <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Occupants ({selectedRoom.occupants.length}/2)</h5>
+                <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Occupants ({(selectedRoom.occupants || []).length}/2)</h5>
                 
-                {selectedRoom.occupants.length === 0 ? (
+                {(selectedRoom.occupants || []).length === 0 ? (
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: '1.5rem' }}>No guests assigned to this room.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    {selectedRoom.occupants.map(occ => (
+                    {(selectedRoom.occupants || []).map(occ => (
                       <div 
                         key={occ._id}
                         style={{ 
@@ -730,13 +730,11 @@ export default function RoomMapPortal() {
                         
                         <button
                           onClick={() => handleUnassignGuest(occ._id)}
+                          className="btn btn-secondary btn-icon"
                           style={{
-                            background: 'none',
-                            border: 'none',
                             color: 'var(--accent-rose)',
-                            cursor: 'pointer',
-                            padding: '4px',
-                            borderRadius: '4px'
+                            padding: '0.3rem',
+                            borderRadius: '6px'
                           }}
                           title="Remove guest from room"
                         >
@@ -748,7 +746,7 @@ export default function RoomMapPortal() {
                 )}
 
                 {/* Assignment tool */}
-                {selectedRoom.occupants.length < 2 && (
+                {(selectedRoom.occupants || []).length < 2 && (
                   <form onSubmit={handleAssignGuest} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                     <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Assign Attendee</h5>
                     
