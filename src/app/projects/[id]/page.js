@@ -849,12 +849,13 @@ export default function ProjectDetail() {
     // 1. Synchronize inDate, outDate, and daysUsed (nights) strictly
     if (rg.bulkBlock && rg.bulkBlock.daysUsed) {
       rg.daysUsed = rg.bulkBlock.daysUsed;
-      if (rg.inDate) {
-        const dIn = parseDateLocal(rg.inDate);
-        if (dIn) {
-          const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(rg.daysUsed));
-          rg.outDate = dOut.toISOString();
-        }
+    }
+    
+    if (rg.inDate && rg.daysUsed > 0) {
+      const dIn = parseDateLocal(rg.inDate);
+      if (dIn) {
+        const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(rg.daysUsed));
+        rg.outDate = dOut.toISOString();
       }
     } else if (rg.inDate && rg.outDate) {
       const dIn = parseDateLocal(rg.inDate);

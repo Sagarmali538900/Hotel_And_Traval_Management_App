@@ -91,12 +91,13 @@ export async function GET(request, { params }) {
 
       if (r.bulkBlock && r.bulkBlock.daysUsed) {
         r.days = r.bulkBlock.daysUsed;
-        if (r.checkIn) {
-          const dIn = parseDateLocal(r.checkIn);
-          if (dIn) {
-            const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(r.days));
-            r.checkOut = dOut.toISOString();
-          }
+      }
+      
+      if (r.checkIn && r.days > 0) {
+        const dIn = parseDateLocal(r.checkIn);
+        if (dIn) {
+          const dOut = new Date(dIn.getFullYear(), dIn.getMonth(), dIn.getDate() + Number(r.days));
+          r.checkOut = dOut.toISOString();
         }
       } else if (r.checkIn && r.checkOut) {
         const dIn = parseDateLocal(r.checkIn);
