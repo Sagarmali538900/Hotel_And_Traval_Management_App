@@ -114,10 +114,16 @@ export async function PUT(request) {
       g.daysUsed = duration;
       g.hotelCost = totalCost;
       if (bookingDate) {
-        g.checkInDate = new Date(bookingDate);
-        const out = new Date(bookingDate);
-        out.setDate(out.getDate() + duration);
-        g.checkOutDate = out;
+        const parts = String(bookingDate).split('T')[0].split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+            g.checkInDate = new Date(y, m, d);
+            g.checkOutDate = new Date(y, m, d + duration);
+          }
+        }
       }
       await g.save();
     }

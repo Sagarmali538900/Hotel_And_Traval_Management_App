@@ -672,23 +672,39 @@ export default function ProjectDetail() {
     const hotel = (hb.hotelName || 'Unspecified Hotel').trim();
     const room = (hb.roomNumber || 'Unassigned').trim();
     const key = `${hotel.toLowerCase()}-${room.toLowerCase()}`;
-    
     if (!roomGroupsMap[key]) {
+      const parseDateParts = (dateInput) => {
+        if (!dateInput) return null;
+        let str = typeof dateInput === 'string' ? dateInput.split('T')[0] : '';
+        if (!str && dateInput instanceof Date) {
+          try { str = dateInput.toISOString().split('T')[0]; } catch(e){}
+        }
+        const parts = str.split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+            return new Date(y, m, d);
+          }
+        }
+        const dt = new Date(dateInput);
+        return isNaN(dt.getTime()) ? null : dt;
+      };
+
+      const inD = parseDateParts(hb.bookingDate);
+      const outD = (inD && hb.daysUsed) ? new Date(inD.getFullYear(), inD.getMonth(), inD.getDate() + Number(hb.daysUsed)) : null;
+
       roomGroupsMap[key] = {
         hotelName: hotel,
         roomNumber: room,
         occupants: [],
         bulkBlock: hb,
-        inDate: hb.bookingDate ? new Date(hb.bookingDate).toISOString() : null,
-        outDate: null,
+        inDate: inD ? inD.toISOString() : null,
+        outDate: outD ? outD.toISOString() : null,
         daysUsed: hb.daysUsed || 1,
         roomCostPerDay: hb.roomCostPerDay || 0
       };
-      if (hb.bookingDate && hb.daysUsed) {
-        const d = new Date(hb.bookingDate);
-        d.setDate(d.getDate() + hb.daysUsed);
-        roomGroupsMap[key].outDate = d.toISOString();
-      }
     }
   });
 

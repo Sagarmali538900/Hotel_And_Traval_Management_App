@@ -21,10 +21,28 @@ import {
   Pencil
 } from 'lucide-react';
 
+const parseDateParts = (dateInput) => {
+  if (!dateInput) return null;
+  let str = typeof dateInput === 'string' ? dateInput.split('T')[0] : '';
+  if (!str && dateInput instanceof Date) {
+    try { str = dateInput.toISOString().split('T')[0]; } catch(e){}
+  }
+  const parts = str.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      return new Date(y, m, d);
+    }
+  }
+  const dt = new Date(dateInput);
+  return isNaN(dt.getTime()) ? null : dt;
+};
+
 const formatDateSafe = (d) => {
-  if (!d) return null;
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return null;
+  const dt = parseDateParts(d);
+  if (!dt) return null;
   return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 };
 
@@ -519,20 +537,27 @@ export default function RoomMapPortal() {
                       room.occupants.forEach(o => {
                         const checkIn = o.checkInDate || o.arrivalDate;
                         const checkOut = o.checkOutDate || o.departureDate;
-                        if (checkIn && (!inDate || new Date(checkIn) < new Date(inDate))) inDate = checkIn;
-                        if (checkOut && (!outDate || new Date(checkOut) > new Date(outDate))) outDate = checkOut;
+                        if (checkIn) {
+                          const d = parseDateParts(checkIn);
+                          if (d && (!inDate || d < inDate)) inDate = d;
+                        }
+                        if (checkOut) {
+                          const d = parseDateParts(checkOut);
+                          if (d && (!outDate || d > outDate)) outDate = d;
+                        }
                       });
                     } else if (room.bookingDate) {
-                      inDate = room.bookingDate;
-                      if (room.daysUsed) {
-                        const d = new Date(room.bookingDate);
-                        d.setDate(d.getDate() + room.daysUsed);
-                        outDate = d.toISOString();
+                      const d = parseDateParts(room.bookingDate);
+                      if (d) {
+                        inDate = d;
+                        if (room.daysUsed) {
+                          outDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Number(room.daysUsed));
+                        }
                       }
                     }
 
-                    const formattedIn = inDate ? new Date(inDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
-                    const formattedOut = outDate ? new Date(outDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+                    const formattedIn = inDate ? formatDateSafe(inDate) : null;
+                    const formattedOut = outDate ? formatDateSafe(outDate) : null;
 
                     return (
                       <button
