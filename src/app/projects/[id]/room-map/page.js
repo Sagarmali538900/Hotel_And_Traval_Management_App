@@ -77,6 +77,13 @@ export default function RoomMapPortal() {
   };
 
   const handleOpenEditRoomModal = (room) => {
+    if (!room) return;
+    let bDate = new Date().toISOString().split('T')[0];
+    if (room.inDate && !isNaN(new Date(room.inDate).getTime())) {
+      try {
+        bDate = new Date(room.inDate).toISOString().split('T')[0];
+      } catch (e) {}
+    }
     setEditRoomForm({
       oldHotelName: room.hotelName || '',
       oldRoomNumber: room.roomNumber || '',
@@ -84,7 +91,7 @@ export default function RoomMapPortal() {
       newRoomNumber: room.roomNumber || '',
       roomCostPerDay: room.roomCostPerDay || 0,
       daysUsed: room.daysUsed || 1,
-      bookingDate: room.inDate ? new Date(room.inDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      bookingDate: bDate,
       notes: room.notes || ''
     });
     setEditRoomError('');
