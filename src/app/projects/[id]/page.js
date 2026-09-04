@@ -268,7 +268,24 @@ export default function ProjectDetail() {
     }));
   };
 
+  const toInputDateString = (d) => {
+    if (!d) return new Date().toLocaleDateString('en-CA');
+    if (typeof d === 'string') {
+      const parts = d.split('T')[0].split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+    }
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (!dt || isNaN(dt.getTime())) return new Date().toLocaleDateString('en-CA');
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const handleOpenEditRoomModal = (rg) => {
+    if (!rg) return;
     setEditRoomForm({
       oldHotelName: rg.hotelName || '',
       oldRoomNumber: rg.roomNumber || '',
@@ -276,7 +293,7 @@ export default function ProjectDetail() {
       newRoomNumber: rg.roomNumber || '',
       roomCostPerDay: rg.roomCostPerDay || 0,
       daysUsed: rg.daysUsed || 1,
-      bookingDate: rg.inDate ? new Date(rg.inDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      bookingDate: toInputDateString(rg.inDate || rg.bookingDate),
       notes: rg.notes || ''
     });
     setEditRoomError('');

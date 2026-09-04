@@ -46,6 +46,22 @@ const parseDateParts = (dateInput) => {
   return isNaN(dt.getTime()) ? null : dt;
 };
 
+const toInputDateString = (d) => {
+  if (!d) return new Date().toLocaleDateString('en-CA');
+  if (typeof d === 'string') {
+    const parts = d.split('T')[0].split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  const dt = (d instanceof Date) ? d : parseDateParts(d);
+  if (!dt || isNaN(dt.getTime())) return new Date().toLocaleDateString('en-CA');
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 const formatDateSafe = (d) => {
   const dt = parseDateParts(d);
   if (!dt) return null;
@@ -73,7 +89,7 @@ export default function RoomMapPortal() {
     roomNumber: '',
     roomCostPerDay: 0,
     daysUsed: 1,
-    bookingDate: new Date().toISOString().split('T')[0],
+    bookingDate: toInputDateString(new Date()),
     notes: ''
   });
   const [addingRoom, setAddingRoom] = useState(false);
@@ -88,7 +104,7 @@ export default function RoomMapPortal() {
     newRoomNumber: '',
     roomCostPerDay: 0,
     daysUsed: 1,
-    bookingDate: new Date().toISOString().split('T')[0],
+    bookingDate: toInputDateString(new Date()),
     notes: ''
   });
   const [editingRoom, setEditingRoom] = useState(false);
@@ -104,6 +120,7 @@ export default function RoomMapPortal() {
   };
 
   const handleOpenEditRoomModal = (room) => {
+    if (!room) return;
     setEditRoomForm({
       oldHotelName: room.hotelName || '',
       oldRoomNumber: room.roomNumber || '',
@@ -111,7 +128,7 @@ export default function RoomMapPortal() {
       newRoomNumber: room.roomNumber || '',
       roomCostPerDay: room.roomCostPerDay || 0,
       daysUsed: room.daysUsed || 1,
-      bookingDate: room.inDate ? new Date(room.inDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      bookingDate: toInputDateString(room.inDate || room.bookingDate),
       notes: room.notes || ''
     });
     setEditRoomError('');
