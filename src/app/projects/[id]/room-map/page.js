@@ -213,11 +213,13 @@ export default function RoomMapPortal() {
         setData(json.data);
         
         // Refresh selected room detail if it's currently open
-        if (selectedRoom) {
-          const freshGuests = json.data.guests || [];
+        if (selectedRoom && selectedRoom.hotelName && selectedRoom.roomNumber) {
+          const freshGuests = json.data?.guests || [];
+          const sHotel = (selectedRoom.hotelName || '').trim().toLowerCase();
+          const sRoom = (selectedRoom.roomNumber || '').trim().toLowerCase();
           const occupants = freshGuests.filter(g => 
-            (g.hotelName || '').trim().toLowerCase() === selectedRoom.hotelName.toLowerCase() &&
-            (g.roomNumber || '').trim().toLowerCase() === selectedRoom.roomNumber.toLowerCase()
+            (g.hotelName || '').trim().toLowerCase() === sHotel &&
+            (g.roomNumber || '').trim().toLowerCase() === sRoom
           );
           setSelectedRoom({
             hotelName: selectedRoom.hotelName,
@@ -251,18 +253,18 @@ export default function RoomMapPortal() {
     );
   }
 
-  if (error) {
+  if (error || !data || !data.project) {
     return (
       <div className="card" style={{ maxWidth: '500px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
         <AlertTriangle size={48} style={{ color: 'var(--accent-rose)', marginBottom: '1rem' }} />
-        <h3 style={{ marginBottom: '0.5rem' }}>Error Loading Data</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{error}</p>
+        <h3 style={{ marginBottom: '0.5rem' }}>Room Map Unavailable</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{error || 'Project data could not be loaded'}</p>
         <Link href="/" className="btn btn-primary">Back to Dashboard</Link>
       </div>
     );
   }
 
-  const { project, hotelBookings = [], guests = [] } = data;
+  const { project = {}, hotelBookings = [], guests = [] } = data;
 
   // Compile list of unique hotels & room numbers
   const roomsByHotel = {};
