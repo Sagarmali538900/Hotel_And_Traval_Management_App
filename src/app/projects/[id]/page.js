@@ -747,15 +747,12 @@ export default function ProjectDetail() {
     if (!roomGroupsMap[key]) {
       const parseDateParts = (dateInput) => {
         if (!dateInput) return null;
-        let str = '';
-        if (typeof dateInput === 'string') {
-          str = dateInput.split('T')[0];
-        } else if (dateInput instanceof Date) {
-          try { str = dateInput.toISOString().split('T')[0]; } catch(e){}
-        } else {
-          str = String(dateInput).split('T')[0];
+        if (dateInput instanceof Date) {
+          if (isNaN(dateInput.getTime())) return null;
+          return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
         }
 
+        const str = String(dateInput).split('T')[0];
         const parts = str.split('-');
         if (parts.length === 3) {
           const y = parseInt(parts[0], 10);
@@ -767,7 +764,7 @@ export default function ProjectDetail() {
         }
 
         const dt = new Date(dateInput);
-        return isNaN(dt.getTime()) ? null : dt;
+        return isNaN(dt.getTime()) ? null : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
       };
 
       const inD = parseDateParts(hb.bookingDate);

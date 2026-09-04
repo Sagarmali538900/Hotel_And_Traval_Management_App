@@ -23,15 +23,12 @@ import {
 
 const parseDateParts = (dateInput) => {
   if (!dateInput) return null;
-  let str = '';
-  if (typeof dateInput === 'string') {
-    str = dateInput.split('T')[0];
-  } else if (dateInput instanceof Date) {
-    try { str = dateInput.toISOString().split('T')[0]; } catch(e){}
-  } else {
-    str = String(dateInput).split('T')[0];
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return null;
+    return new Date(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate());
   }
 
+  const str = String(dateInput).split('T')[0];
   const parts = str.split('-');
   if (parts.length === 3) {
     const y = parseInt(parts[0], 10);
@@ -43,7 +40,7 @@ const parseDateParts = (dateInput) => {
   }
 
   const dt = new Date(dateInput);
-  return isNaN(dt.getTime()) ? null : dt;
+  return isNaN(dt.getTime()) ? null : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 };
 
 const toInputDateString = (d) => {
@@ -65,10 +62,11 @@ const toInputDateString = (d) => {
 const formatDateSafe = (d) => {
   const dt = parseDateParts(d);
   if (!dt) return null;
-  const day = String(dt.getDate()).padStart(2, '0');
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const year = dt.getFullYear();
-  return `${day}/${month}/${year}`;
+  const day = dt.getDate();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+  const month = months[dt.getMonth()];
+  const year = String(dt.getFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
 };
 
 export default function RoomMapPortal() {
@@ -567,7 +565,16 @@ export default function RoomMapPortal() {
                     // Calculate Room IN and OUT stay dates
                     let inDate = null;
                     let outDate = null;
-                    if (room.occupants && room.occupants.length > 0) {
+                    if (room.bookingDate) {
+                      const d = parseDateParts(room.bookingDate);
+                      if (d) {
+                        inDate = d;
+                        if (room.daysUsed) {
+                          outDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Number(room.daysUsed));
+                        }
+                      }
+                    }
+                    if (!inDate && room.occupants && room.occupants.length > 0) {
                       room.occupants.forEach(o => {
                         const checkIn = o.checkInDate || o.arrivalDate;
                         const checkOut = o.checkOutDate || o.departureDate;
@@ -580,14 +587,6 @@ export default function RoomMapPortal() {
                           if (d && (!outDate || d > outDate)) outDate = d;
                         }
                       });
-                    } else if (room.bookingDate) {
-                      const d = parseDateParts(room.bookingDate);
-                      if (d) {
-                        inDate = d;
-                        if (room.daysUsed) {
-                          outDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Number(room.daysUsed));
-                        }
-                      }
                     }
 
                     const formattedIn = inDate ? formatDateSafe(inDate) : null;
@@ -734,9 +733,9 @@ export default function RoomMapPortal() {
                           {/* Stay IN and OUT dates */}
                           <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} /> 
-                            <span>IN: {occ.checkInDate ? new Date(occ.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.arrivalDate ? new Date(occ.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                            <span>IN: {formatDateSafe(occ.checkInDate || occ.arrivalDate) || 'TBD'}</span>
                             <span>•</span>
-                            <span>OUT: {occ.checkOutDate ? new Date(occ.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (occ.departureDate ? new Date(occ.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}</span>
+                            <span>OUT: {formatDateSafe(occ.checkOutDate || occ.departureDate) || 'TBD'}</span>
                           </div>
                           
                           {/* Live check-in badge switch */}
@@ -853,11 +852,11 @@ export default function RoomMapPortal() {
                       <div style={{ fontWeight: '600' }}>{ug.guestName} ({ug.numberOfGuests} pax)</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                         <span style={{ color: 'var(--accent-cyan)' }}>
-                          IN: {ug.checkInDate ? new Date(ug.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (ug.arrivalDate ? new Date(ug.arrivalDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}
+                          IN: {formatDateSafe(ug.checkInDate || ug.arrivalDate) || 'TBD'}
                         </span>
                         <span>•</span>
                         <span>
-                          OUT: {ug.checkOutDate ? new Date(ug.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : (ug.departureDate ? new Date(ug.departureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'TBD')}
+                          OUT: {formatDateSafe(ug.checkOutDate || ug.departureDate) || 'TBD'}
                         </span>
                       </div>
                     </div>
