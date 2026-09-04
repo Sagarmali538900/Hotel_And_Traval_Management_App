@@ -271,9 +271,9 @@ export default function RoomMapPortal() {
 
   // 1. Gather rooms from bulk hotel blocks
   hotelBookings.forEach(hb => {
-    const hotel = (hb.hotelName || 'Unspecified Hotel').trim();
+    const hotel = (hb.hotelName || '').trim();
     const room = (hb.roomNumber || '').trim();
-    if (room) {
+    if (room && hotel.toLowerCase() !== 'unallocated' && room.toLowerCase() !== 'unallocated' && hotel.toLowerCase() !== 'unassigned') {
       if (!roomsByHotel[hotel]) {
         roomsByHotel[hotel] = {};
       }
@@ -290,7 +290,7 @@ export default function RoomMapPortal() {
   guests.forEach(g => {
     const hotel = (g.hotelName || '').trim();
     const room = (g.roomNumber || '').trim();
-    if (hotel && room) {
+    if (hotel && room && hotel.toLowerCase() !== 'unallocated' && room.toLowerCase() !== 'unallocated' && hotel.toLowerCase() !== 'unassigned') {
       if (!roomsByHotel[hotel]) {
         roomsByHotel[hotel] = {};
       }
@@ -347,7 +347,11 @@ export default function RoomMapPortal() {
   });
 
   // Compile list of unallocated guests (who need a room)
-  const unallocatedGuests = guests.filter(g => !g.roomNumber || !g.roomNumber.trim());
+  const unallocatedGuests = guests.filter(g => {
+    const rm = (g.roomNumber || '').trim().toLowerCase();
+    const htl = (g.hotelName || '').trim().toLowerCase();
+    return !rm || rm === 'unallocated' || rm === 'unassigned' || rm === 'none' || htl === 'unallocated' || htl === 'unassigned';
+  });
 
   // Assign a guest to a specific room
   const handleAssignGuest = async (e) => {
