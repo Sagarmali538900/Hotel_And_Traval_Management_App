@@ -367,12 +367,36 @@ export default function ProjectDetail() {
 
   const handleGuestInputChange = (e) => {
     const { name, value } = e.target;
-    setGuestForm(prev => ({
-      ...prev,
-      [name]: name === 'numberOfGuests' ? parseInt(value) || 1 :
-              name === 'roomCostPerDay' ? parseFloat(value) || 0 :
-              name === 'daysUsed' ? parseInt(value) || 0 : value
-    }));
+    setGuestForm(prev => {
+      const updated = {
+        ...prev,
+        [name]: name === 'numberOfGuests' ? parseInt(value) || 1 :
+                name === 'roomCostPerDay' ? parseFloat(value) || 0 :
+                name === 'daysUsed' ? parseInt(value) || 0 : value
+      };
+
+      if (name === 'hotelName' || name === 'roomNumber') {
+        const hName = name === 'hotelName' ? value : updated.hotelName;
+        const rNum = name === 'roomNumber' ? value : updated.roomNumber;
+        if (hName && rNum && data?.hotelBookings) {
+          const matched = data.hotelBookings.find(hb =>
+            hb.hotelName?.trim().toLowerCase() === hName.trim().toLowerCase() &&
+            hb.roomNumber?.trim().toLowerCase() === rNum.trim().toLowerCase()
+          );
+          if (matched) {
+            if (matched.roomCostPerDay) updated.roomCostPerDay = matched.roomCostPerDay;
+            if (matched.daysUsed) updated.daysUsed = matched.daysUsed;
+            if (matched.bookingDate) {
+              updated.checkInDate = matched.bookingDate;
+              const d = new Date(matched.bookingDate);
+              d.setDate(d.getDate() + (matched.daysUsed || 1));
+              updated.checkOutDate = d.toISOString();
+            }
+          }
+        }
+      }
+      return updated;
+    });
   };
 
   const triggerAddGuestModal = () => {
@@ -441,8 +465,39 @@ export default function ProjectDetail() {
       setGuestSubmitting(true);
       setGuestError('');
       
+      let finalCheckIn = guestForm.checkInDate;
+      let finalCheckOut = guestForm.checkOutDate;
+      let finalDays = guestForm.daysUsed || 1;
+      let finalRate = guestForm.roomCostPerDay || 0;
+
+      if (guestForm.hotelName && guestForm.roomNumber) {
+        const matchingHb = data?.hotelBookings?.find(hb =>
+          hb.hotelName?.trim().toLowerCase() === guestForm.hotelName?.trim().toLowerCase() &&
+          hb.roomNumber?.trim().toLowerCase() === guestForm.roomNumber?.trim().toLowerCase()
+        );
+        if (matchingHb) {
+          if (matchingHb.bookingDate) finalCheckIn = matchingHb.bookingDate;
+          if (matchingHb.daysUsed) finalDays = matchingHb.daysUsed;
+          if (matchingHb.roomCostPerDay && !finalRate) finalRate = matchingHb.roomCostPerDay;
+        }
+      }
+
+      if (!finalCheckIn) {
+        finalCheckIn = guestForm.arrivalDate || data?.project?.startDate || new Date().toISOString();
+      }
+
+      if (finalCheckIn && finalDays) {
+        const d = new Date(finalCheckIn);
+        d.setDate(d.getDate() + finalDays);
+        finalCheckOut = d.toISOString();
+      }
+
       const payload = {
         ...guestForm,
+        checkInDate: finalCheckIn,
+        checkOutDate: finalCheckOut,
+        daysUsed: finalDays,
+        roomCostPerDay: finalRate,
         projectId: id
       };
 
@@ -1743,38 +1798,15 @@ export default function ProjectDetail() {
                 <>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Check-in Date</label>
-                      <input
-                        type="date"
-                        name="checkInDate"
-                        className="form-input"
-                        value={guestForm.checkInDate}
-                        onChange={handleGuestInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Check-out Date</label>
-                      <input
-                        type="date"
-                        name="checkOutDate"
-                        className="form-input"
-                        value={guestForm.checkOutDate}
-                        onChange={handleGuestInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Stay Duration (Nights - Auto)</label>
+                      <label className="form-label">Stay Duration (Nights)</label>
                       <input
                         type="number"
                         name="daysUsed"
                         className="form-input"
-                        value={guestForm.daysUsed}
-                        readOnly
-                        style={{ backgroundColor: 'rgba(0,0,0,0.1)', cursor: 'not-allowed' }}
+                        min="1"
+                        placeholder="1"
+                        value={guestForm.daysUsed || 1}
+                        onChange={handleGuestInputChange}
                       />
                     </div>
                     <div className="form-group">
@@ -1790,10 +1822,12 @@ export default function ProjectDetail() {
                       />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '0.5rem 0', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}>
-                    <span>Calculated Room Stay Cost:</span>
-                    <strong style={{ color: 'var(--accent-cyan)' }}>₹{(guestForm.daysUsed * guestForm.roomCostPerDay).toLocaleString('en-IN')}</strong>
-                  </div>
+                  {(guestForm.daysUsed || 1) > 0 && (guestForm.roomCostPerDay || 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '0.5rem 0', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+                      <span>Calculated Room Stay Cost:</span>
+                      <strong style={{ color: 'var(--accent-cyan)' }}>₹{((guestForm.daysUsed || 1) * (guestForm.roomCostPerDay || 0)).toLocaleString('en-IN')}</strong>
+                    </div>
+                  )}
                 </>
               )}
 
